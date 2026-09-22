@@ -1,6 +1,9 @@
-# Both images build from the repository root, so this list is what keeps a
-# multi-hundred-megabyte build context from being sent to the daemon — and, more
-# importantly, what keeps a local .env out of an image.
+# This governs the BACKEND image only — ./Dockerfile, built from the repository
+# root because it needs data/. The website builds from frontend/ as its own context
+# and has its own frontend/.dockerignore.
+#
+# What this list is for: keeping a multi-hundred-megabyte context off the wire and,
+# more importantly, keeping a local .env out of an image.
 
 .git
 .github
@@ -36,9 +39,9 @@ credentials*.json
 
 # ---- Large artefacts nothing in a running container reads ----
 docs/screenshots
-# The backend image does not copy the harness at all. The frontend image copies
-# only evals/reports/latest.json, which its prebuild step prefers over the
-# committed copy so the deployed /evaluation page belongs to the deployed commit.
-# Everything else under evals/reports/ is a dated artefact no build needs.
-evals/reports/*.json
-!evals/reports/latest.json
+frontend
+# The backend image does not copy the harness: nothing in backend/app reads it, and
+# the harness needs dev extras this image does not install. The website renders the
+# committed copy at frontend/src/data/evaluation-report.json, which CI checks
+# against evals/reports/latest.json.
+evals

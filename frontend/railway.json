@@ -1,23 +1,20 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
   "_comment": [
-    "The intended settings for the public website, in version control. Railway",
-    "reads config-as-code from the repository root only, so the setting that takes",
-    "effect is the service variable RAILWAY_DOCKERFILE_PATH=frontend/Dockerfile.",
-    "See docs/deployment.md.",
+    "Build configuration for the public website.",
     "",
-    "Leave the service's root directory at",
-    "the repository root: frontend/Dockerfile copies evals/reports/latest.json,",
-    "which lives outside frontend/, so the deployed evaluation page belongs to",
-    "the deployed commit rather than to whenever the report was last committed.",
+    "Set the service's root directory to `frontend`. That makes this directory the",
+    "build context, so Railway finds frontend/Dockerfile at the root of it with no",
+    "builder setting to configure, and reads this file rather than the repository",
+    "root's railway.json (which builds the backend image).",
     "",
-    "No build-time variables. Every data page is force-dynamic, so the image",
-    "builds without a reachable backend, and API_BASE_URL is read at runtime —",
-    "server-side only, never exposed to the browser."
+    "No build-time variables. Every data page is force-dynamic, so the image builds",
+    "without a reachable backend, and API_BASE_URL is read at runtime — server-side",
+    "only, never exposed to the browser."
   ],
   "build": {
     "builder": "DOCKERFILE",
-    "dockerfilePath": "frontend/Dockerfile"
+    "dockerfilePath": "Dockerfile"
   },
   "deploy": {
     "healthcheckPath": "/",

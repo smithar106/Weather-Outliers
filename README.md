@@ -274,8 +274,10 @@ so a fixture-data capture cannot be passed off as a real one.
 ## Repository layout
 
 ```
+Dockerfile   Backend image — API and worker. At the root because it needs data/,
+             and because PaaS builders detect a Dockerfile at the context root
 backend/     FastAPI app, statistics, provider adapters, agent, pipeline CLI, tests
-frontend/    Next.js website
+frontend/    Next.js website — self-contained image, built with frontend/ as context
 data/        Versioned city registry + selection rationale  (data/README.md)
 evals/       Reproducible evaluation harness and its committed report
 docs/        methodology, data-sources, deployment, local-development

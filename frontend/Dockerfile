@@ -1,16 +1,26 @@
 # Frontend image: the public website.
 #
-# Build context is the repository root so that `evals/reports/latest.json` is
-# visible to the prebuild step. It is optional — `sync-evaluation-report.mjs`
-# falls back to the committed copy in `src/data/` — but when it is present the
-# deployed page shows the report belonging to the deployed commit.
+# Build context is THIS directory, not the repository root:
 #
-#   docker build -f frontend/Dockerfile -t weather-outliers-frontend .
+#   cd frontend && docker build -t weather-outliers-frontend .
+#
+# Self-contained on purpose. A PaaS builder detects a Dockerfile at the root of
+# the build context and otherwise guesses from the languages it finds, which for
+# this repository's root — a Python service beside a Node service — it cannot do.
+# Pointing a service's root directory at frontend/ makes this file the one that is
+# found, with no builder configuration to set. See docs/deployment.md.
+#
+# The cost of the narrower context: this image cannot copy evals/reports/latest.json
+# from above itself, so the prebuild step uses the committed copy at
+# src/data/evaluation-report.json. That copy is not allowed to drift — CI runs
+# `npm run check-evals`, which fails if it differs from evals/reports/latest.json.
+# The guarantee moved from the image to the pipeline, which is the better place for
+# it: it now fails a pull request rather than a deploy.
 
 # ---------------------------------------------------------------- dependencies
 FROM node:22-slim AS deps
 WORKDIR /app
-COPY frontend/package.json frontend/package-lock.json ./
+COPY package.json package-lock.json ./
 # `npm ci` and not `npm install`: the lockfile is the build input. An install that
 # is allowed to resolve a different tree is an image that does not match CI.
 RUN npm ci
@@ -19,11 +29,7 @@ RUN npm ci
 FROM node:22-slim AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY frontend/ ./
-# Optional, and placed where the prebuild script looks for it: that script resolves
-# the report relative to itself, two levels up from frontend/scripts/, which inside
-# this stage is /evals/reports/. Absent, it falls back to the committed copy.
-COPY evals/reports/ /evals/reports/
+COPY . ./
 
 # The build must not reach the backend. Every data page is `force-dynamic`, so
 # nothing is prerendered and no API_BASE_URL is needed here — a build that could

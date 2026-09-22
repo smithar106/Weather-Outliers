@@ -1,0 +1,29 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "_comment": [
+    "Build configuration for every service whose root directory is the repository",
+    "root: the API and both cron workers. They share one image (./Dockerfile) and",
+    "differ only in start command, which is a per-service setting.",
+    "",
+    "This file is at the repository root because that is where Railway reads",
+    "config-as-code from. Two earlier attempts put the equivalent in",
+    "backend/railway.json, where it was silently ignored, and a third relied on the",
+    "RAILWAY_DOCKERFILE_PATH variable, which an explicitly pinned builder overrides.",
+    "Config-as-code does not lose that argument: it takes precedence over the",
+    "dashboard. See docs/deployment.md.",
+    "",
+    "Deliberately build-only. A deploy block here would also apply to the cron",
+    "workers, and a health check on a service that starts, does a day's work and",
+    "exits would report it down every time it succeeded. Health check, restart",
+    "policy and start command are therefore per-service settings, documented in",
+    "docs/deployment.md.",
+    "",
+    "The website is NOT covered by this file: its service sets its root directory to",
+    "frontend/, so it builds frontend/Dockerfile in a frontend/ context and reads",
+    "frontend/railway.json."
+  ],
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
+  }
+}

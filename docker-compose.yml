@@ -43,8 +43,9 @@ services:
 
   api:
     build:
+      # Root context: the image copies data/, which lives above backend/.
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: Dockerfile
     environment:
       ENVIRONMENT: development
       DATABASE_URL: postgresql+psycopg://weather:weather@db:5432/weather_outliers
@@ -62,8 +63,10 @@ services:
 
   web:
     build:
-      context: .
-      dockerfile: frontend/Dockerfile
+      # Narrower context than the API: the website image is self-contained, which
+      # is also what lets a PaaS detect it without any builder configuration.
+      context: ./frontend
+      dockerfile: Dockerfile
     environment:
       # Server-side fetches go over the compose network. The browser never calls
       # the API directly for page data, so this address does not need to be

@@ -99,49 +99,56 @@ the private network and off the metered egress path.
 
 | Setting | Value |
 | --- | --- |
-| Root directory | `/` (the Dockerfile copies `data/`, which sits outside `backend/`, so the build context must be the repo root) |
-| **Builder** | set by `RAILWAY_DOCKERFILE_PATH` below — **read the box first** |
+| Root directory | `/` — the default |
+| Builder | *(nothing to set: `./Dockerfile` is detected, and `railway.json` pins it)* |
 | Start command | *(leave empty — the image's `CMD` reads `$PORT`)* |
 | Health check path | `/health` |
 | Public domain | generate one, or attach a custom domain |
 
-> ### Read this before the first deploy, or it fails
+> ### How the builder is decided, and why it took three tries
 >
-> Railway's documented rule is that it *"will always build with a Dockerfile if it
-> finds one"* — meaning one at the root of the build context. This is a monorepo:
-> the root holds `backend/` (Python) and `frontend/` (Node) and no Dockerfile, so
-> Railway finds nothing to detect, falls back to Railpack, and stops with
+> Railway's rule is that it *"will always build with a Dockerfile if it finds one"* —
+> one at the root of the **build context**. The only per-service setting that matters
+> here is therefore **Root directory**, because that is what sets the context:
+>
+> | Service | Root directory | Dockerfile it finds |
+> | --- | --- | --- |
+> | Backend API | `/` | `./Dockerfile` |
+> | Workers | `/` | `./Dockerfile` (same image) |
+> | Website | `frontend` | `frontend/Dockerfile` |
+>
+> Nothing else needs configuring. `railway.json` at the repository root pins
+> `builder: DOCKERFILE` for the first two, and `frontend/railway.json` does the same
+> for the website; config-as-code takes precedence over the dashboard, so a builder
+> left pinned to Railpack by an earlier attempt cannot override it.
+>
+> **The history, because the failure mode is worth recognising.** The repository
+> originally kept its Dockerfiles at `backend/Dockerfile` and `frontend/Dockerfile`,
+> and three deploys failed with:
 >
 > ```
 > Railpack could not determine how to build the app.
 > ```
 >
-> That is a configuration message, not a code fault. The fix is **one variable per
-> service** — add it in the service's **Variables** tab with the rest:
+> That message means no Dockerfile was found at the context root, so Railway fell
+> back to language autodetection and could not classify a root holding a Python
+> service beside a Node one. Two fixes were tried and did not work: a `railway.json`
+> inside `backend/` (Railway reads config-as-code from the root, so it was ignored),
+> and the `RAILWAY_DOCKERFILE_PATH` variable (documented, and genuinely the right
+> tool — but an explicitly pinned builder takes precedence over it, and by then the
+> services had one). The layout above needs neither, which is why it is the layout.
 >
-> ```
-> RAILWAY_DOCKERFILE_PATH=backend/Dockerfile
-> ```
+> `RAILWAY_DOCKERFILE_PATH` is still a valid escape hatch if you would rather not
+> move a root directory — set it to `Dockerfile` or `frontend/Dockerfile` — but with
+> the files where they are now, it should not be necessary.
 >
-> Setting it switches the service to the Dockerfile builder and names the file, in
-> one step, with no build-settings hunting. Use `frontend/Dockerfile` for the
-> website service and `backend/Dockerfile` for both workers.
->
-> **A variable change alone may not rebuild.** After adding it, trigger a fresh
-> deploy (**Deployments → ⋯ → Redeploy**) rather than waiting: a cached failed build
-> will otherwise be what you keep looking at.
->
-> The `railway.json` files in `backend/` and `frontend/` record the same intent in
-> version control — builder, Dockerfile path, health check, restart policy — but
-> Railway reads config-as-code from the **repository root**, and nothing in its
-> reference documents a way to point a service at a config file in a subdirectory.
-> So treat them as the documented intent, and `RAILWAY_DOCKERFILE_PATH` as the
-> mechanism that actually takes effect.
+> **Redeploy explicitly after changing any of this.** A settings or variable change
+> does not always trigger a rebuild, and the build log you are re-reading may be the
+> old one. Check its timestamp before concluding a fix did not work.
 
 Variables:
 
 ```
-RAILWAY_DOCKERFILE_PATH=backend/Dockerfile   # required; see the box above
 ENVIRONMENT=production
 DATABASE_URL=postgresql+psycopg://...        # as above
 WEATHER_PROVIDER=open_meteo
@@ -166,18 +173,17 @@ so the only thing it governs is direct browser access to the public API.
 
 | Setting | Value |
 | --- | --- |
-| Root directory | `/` |
-| **Builder** | set by `RAILWAY_DOCKERFILE_PATH` below — same caveat as the backend |
+| Root directory | **`frontend`** — this is the one setting that matters; see the box in §2 |
+| Builder | *(nothing to set: `frontend/Dockerfile` is detected there)* |
 | Start command | *(empty — image `CMD` reads `$PORT`)* |
 | Health check path | `/` |
 | Public domain | required; this is the website |
 
-Documented intent in version control: `frontend/railway.json`.
+Build config in version control: `frontend/railway.json`, which Railway reads because the service's root is `frontend`.
 
 Variables:
 
 ```
-RAILWAY_DOCKERFILE_PATH=frontend/Dockerfile  # required
 API_BASE_URL=http://backend.railway.internal:8000
 ```
 
@@ -197,8 +203,8 @@ image builds without a reachable backend. That is checked in CI.
 
 ## 4. Worker service (the schedule)
 
-**[AUTHORIZATION REQUIRED]** Create a third service from the same repo, using
-`backend/Dockerfile` again — the same image as the API, different command.
+**[AUTHORIZATION REQUIRED]** Create a third service from the same repo. It builds
+the root `Dockerfile` — the same image as the API — and differs only in command.
 
 Railway cron services run the start command on a schedule and exit. Two
 schedules are needed, which means two services (Railway allows one cron
@@ -208,15 +214,18 @@ expression per service):
 
 | Setting | Value |
 | --- | --- |
-| Root directory | `/` |
-| **Builder** | set by `RAILWAY_DOCKERFILE_PATH` in the variables below |
+| Root directory | `/` — the default |
+| Builder | *(nothing to set)* |
 | Start command | `python -m app.pipeline run` |
 | Cron schedule | `30 9 * * *` (09:30 UTC) |
 | Health check | none — this service is not a server |
 
-Config as code: `backend/worker.railway.json` (it sets the start command for the
-daily run and `restartPolicyType: NEVER`; override the start command in the UI for
-`worker-finalize`).
+Set **Restart policy → Never** on both workers. A cron run that fails should wait
+for tomorrow rather than immediately retry against the same exhausted provider
+quota, and a failed run cannot corrupt the site: it never reaches the publish step,
+so the last successful board stays up. The root `railway.json` deliberately carries
+no `deploy` block, so it does not impose the API's health check on a service that
+exits by design.
 
 Why 09:30 UTC: the pipeline analyses the most recent local calendar day that has
 finished in *every* city in the registry. The registry's westernmost zone is
@@ -241,7 +250,6 @@ them.
 Variables for **both** worker services:
 
 ```
-RAILWAY_DOCKERFILE_PATH=backend/Dockerfile   # required; same image as the API
 ENVIRONMENT=production
 DATABASE_URL=postgresql+psycopg://...        # same reference as the backend
 WEATHER_PROVIDER=open_meteo
@@ -324,7 +332,6 @@ deployment is *which service gets what* — the least-privilege split is the poi
 
 | Variable | Frontend | Backend | Workers |
 | --- | :---: | :---: | :---: |
-| `RAILWAY_DOCKERFILE_PATH` | ✅ `frontend/Dockerfile` | ✅ `backend/Dockerfile` | ✅ `backend/Dockerfile` |
 | `ENVIRONMENT` | – | ✅ `production` | ✅ `production` |
 | `DATABASE_URL` | – | ✅ | ✅ |
 | `API_BASE_URL` | ✅ private address | – | – |
@@ -387,8 +394,8 @@ railway run --service backend python -m app.pipeline status
 
 | Symptom | Cause | Action |
 | --- | --- | --- |
-| Build fails with `Railpack could not determine how to build the app`, listing the repo's top-level directories | The service has no Dockerfile at the root of its build context, so Railway fell back to Railpack. Expected on a first deploy of this monorepo. | Set `RAILWAY_DOCKERFILE_PATH` on that service (`backend/Dockerfile` or `frontend/Dockerfile`), then **redeploy** — a variable change may not rebuild on its own. |
-| Same Railpack error *after* setting `RAILWAY_DOCKERFILE_PATH` | Either the log is from the earlier build, the variable landed on a different service, or the path has a leading `./` or a typo | Check the build's timestamp against when the variable was saved; confirm the variable is on the failing service; the value is repo-root-relative with no leading slash or dot. |
+| Build fails with `Railpack could not determine how to build the app`, listing the repo's top-level directories | No Dockerfile at the root of that service's build context. For the website it means the root directory is not `frontend`. | Set the root directory per the table in §2, then **redeploy explicitly** — a settings change does not always rebuild. |
+| Same Railpack error after fixing the root directory | The log is the old build, or the service has a builder explicitly pinned to Railpack from an earlier attempt | Compare the build timestamp to when you saved the change. A pinned builder is overridden by `railway.json`, so a genuinely new build cannot still be on Railpack — if it is, you are reading the old log. |
 | `ProviderBudgetExhausted` in a baseline build | Free-tier window spent | Expected. Rerun later; it resumes. |
 | 429s with `Hourly API request limit exceeded` | The provider's real counter is ahead of ours (e.g. two runs in one hour) | Wait for the hour to roll over. Lower `PROVIDER_MAX_CALL_WEIGHT_PER_HOUR` if it recurs. |
 | Board has fewer than 10 events | Fewer than 10 cities have baselines | Continue `build-baselines`. This is correct behaviour, not a bug. |
@@ -404,7 +411,8 @@ railway run --service backend python -m app.pipeline status
 Do not describe this deployment as complete until every line is checked, by
 observation and not by assumption:
 
-- [ ] `RAILWAY_DOCKERFILE_PATH` set on all three app services; each build log shows a Docker build, not Railpack
+- [ ] Website service root directory is `frontend`; the other services are at `/`
+- [ ] Every build log shows a Docker build, not Railpack
 - [ ] PostgreSQL provisioned; public TCP proxy **off**
 - [ ] `DATABASE_URL` on all three app services uses `postgresql+psycopg://` and the private domain
 - [ ] `alembic upgrade head` applied

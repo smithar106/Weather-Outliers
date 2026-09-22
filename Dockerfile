@@ -3,12 +3,21 @@
 # deliberate — the pipeline and the API must agree about the methodology version
 # and the schema, and separate images are how they drift apart.
 #
-# Build context is the repository root, not backend/, because the city registry
-# lives in `data/` outside the backend directory and both the API and the pipeline
-# read it. `evals/` is deliberately NOT copied: nothing in `app/` reads it, and the
-# harness needs the dev extras this image does not install. Build with:
+#   docker build -t weather-outliers-backend .
 #
-#   docker build -f backend/Dockerfile -t weather-outliers-backend .
+# Why this file is at the repository root rather than in backend/, which is where
+# it belongs on the face of it:
+#
+#   1. It needs a root build context regardless, because the city registry lives
+#      in `data/` outside backend/ and both the API and the pipeline read it.
+#   2. PaaS builders detect a Dockerfile at the root of the build context and
+#      otherwise fall back to language autodetection, which cannot make sense of a
+#      repository whose root holds a Python service and a Node service side by
+#      side. Three Railway deploys failed on exactly that before this moved here.
+#      See docs/deployment.md.
+#
+# The website has its own self-contained image in frontend/, built with frontend/
+# as its context. `evals/` is not copied into either: nothing in `app/` reads it.
 
 FROM python:3.13-slim AS base
 
@@ -24,9 +33,18 @@ WORKDIR /app
 # needs compiling means adding a builder stage, not apt-get to this one.
 
 # Dependencies first, so a code change does not reinstall them.
+#
+# setuptools will not build a project whose package directory is absent, and the
+# code is copied *after* this layer precisely so that editing it does not reinstall
+# every dependency. So the package is stubbed for the length of the install and then
+# removed: `app` is an implicit namespace package in this repository — there is no
+# backend/app/__init__.py to copy — and leaving a stub behind would make the image's
+# import semantics differ from the one the tests run against.
 COPY backend/pyproject.toml ./pyproject.toml
-COPY backend/app/__init__.py ./app/__init__.py
-RUN pip install --no-cache-dir .
+RUN mkdir -p app \
+    && touch app/__init__.py \
+    && pip install --no-cache-dir . \
+    && rm app/__init__.py
 
 COPY backend/app ./app
 COPY backend/alembic ./alembic

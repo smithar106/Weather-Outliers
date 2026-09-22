@@ -1,0 +1,28 @@
+# This file is load-bearing, not housekeeping.
+#
+# The builder stage does `COPY --from=deps /app/node_modules` and then `COPY . ./`.
+# If a local node_modules were in the context, that second copy would overwrite the
+# freshly installed tree with one built for whatever machine ran `npm install` —
+# macOS binaries inside a Linux image, and a build that fails in a way that looks
+# like a dependency problem. So the exclusions below are what make the image
+# reproducible, and the repository root's .dockerignore does not apply here: this
+# image's build context is frontend/.
+
+node_modules
+.next
+out
+*.tsbuildinfo
+npm-debug.log*
+
+# ---- secrets: never in an image, regardless of .gitignore ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---- nothing the build or the runtime reads ----
+.git
+Dockerfile
+.dockerignore
+railway.json
