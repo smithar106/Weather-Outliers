@@ -23,6 +23,10 @@ npm-debug.log*
 
 # ---- nothing the build or the runtime reads ----
 .git
-Dockerfile
-.dockerignore
-railway.json
+
+# NOT excluded, deliberately: Dockerfile, .dockerignore and railway.json.
+# Docker does not need them in the context, so excluding them looks like tidiness —
+# but a PaaS decides *which builder to use* by looking at the context after applying
+# these filters ("Found .dockerignore file, applying filters" in Railway's build
+# log). Hiding the Dockerfile from that scan is a way to be told the app cannot be
+# built. A few hundred bytes is the right price for being detected.

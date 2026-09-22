@@ -32,21 +32,31 @@ WORKDIR /app
 # needed here. Kept in mind rather than discovered: adding a dependency that
 # needs compiling means adding a builder stage, not apt-get to this one.
 
-# Dependencies first, so a code change does not reinstall them.
+# Dependencies first, so a code change does not reinstall them. The code is copied
+# *after* this layer precisely so that editing it does not reinstall every dependency,
+# which means setuptools has no package directory to find when it runs — so `app` is
+# stubbed for the length of the install.
 #
-# setuptools will not build a project whose package directory is absent, and the
-# code is copied *after* this layer precisely so that editing it does not reinstall
-# every dependency. So the package is stubbed for the length of the install and then
-# removed: `app` is an implicit namespace package in this repository — there is no
-# backend/app/__init__.py to copy — and leaving a stub behind would make the image's
-# import semantics differ from the one the tests run against.
+# The stub must then be removed from **site-packages**, not just from the build
+# context, and that is the whole point of the last two lines. `app` is an implicit
+# namespace package here — there is no backend/app/__init__.py — and Python resolves
+# a regular package ahead of a namespace one *regardless of sys.path order*: a
+# namespace portion is recorded and the scan continues, so a one-line
+# site-packages/app/__init__.py silently wins over /app/app. The container then builds
+# perfectly and dies on `Error loading ASGI app. Could not import module "app.main"`.
+# That shipped once. The find_spec assertion is here so it cannot ship twice.
 COPY backend/pyproject.toml ./pyproject.toml
 RUN mkdir -p app \
     && touch app/__init__.py \
     && pip install --no-cache-dir . \
-    && rm app/__init__.py
+    && rm -rf app "$(python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')/app" \
+    && python -c "import importlib.util, sys; sys.exit(None if importlib.util.find_spec('app') is None else 'a stub app package survived the dependency layer and would shadow /app/app at runtime')"
 
 COPY backend/app ./app
+# Fail the build, not the deploy, if `app.main` is not importable. find_spec imports
+# the parent package only, so this executes no application code and needs no
+# database, no settings and no network.
+RUN python -c "import importlib.util, sys; sys.exit(None if importlib.util.find_spec('app.main') else 'app.main is not importable from WORKDIR; uvicorn would fail the same way at runtime')"
 COPY backend/alembic ./alembic
 COPY backend/alembic.ini ./alembic.ini
 # The city registry is data the application reads at seed time, not a fixture.

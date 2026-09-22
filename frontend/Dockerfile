@@ -44,8 +44,12 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1
 
 # `output: "standalone"` traces the modules actually reached, so the runtime has
-# no node_modules of its own. Static assets and the public directory are copied
-# separately because the standalone server does not include them.
+# no node_modules of its own. `.next/static` is copied separately because the
+# standalone output does not include it. There is no `public/` line below because
+# this site has no public/ directory — every asset is either inlined or served
+# from .next/static. If one is ever added, it needs its own COPY here, and it
+# needs a tracked file inside it, because git does not store empty directories
+# and COPY of a missing path fails the build.
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 

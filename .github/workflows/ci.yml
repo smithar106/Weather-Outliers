@@ -1,7 +1,12 @@
 # Continuous integration.
 #
-# Three independent jobs rather than one, so a frontend type error and a backend
+# Four independent jobs rather than one, so a frontend type error and a backend
 # test failure are reported together instead of the first one masking the second.
+#
+# The `images` job exists because passing tests and a passing build say nothing
+# about whether the *container* runs. A Dockerfile that builds and then cannot
+# import the module it launches is a deploy that restart-loops, and that is a
+# terrible place to discover it. CI is the only machine here that has Docker.
 #
 # What this deliberately does NOT do: call a weather provider, or call a language
 # model. Both are third-party services with quotas, and a test suite that depends
@@ -159,3 +164,84 @@ jobs:
         # No API_BASE_URL: every data page is force-dynamic, so a successful build
         # here also proves the site can be built without a reachable backend.
         run: npm run build
+
+  images:
+    name: Docker images (build + container smoke test)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Both images are built with the same contexts the deployment uses: the
+      # repository root for the backend, because it copies data/, and frontend/
+      # for the website, because its image is self-contained. Getting those
+      # wrong here would make this job prove the wrong thing.
+      - name: Build the backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          load: true
+          tags: weather-outliers-backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build the website image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          load: true
+          tags: weather-outliers-web:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The database URL points nowhere on purpose. The engine is created lazily,
+      # so this proves the modules import — which is exactly what failed in
+      # production once — without pretending to test connectivity.
+      - name: The backend image can import what it launches
+        run: |
+          docker run --rm \
+            -e DATABASE_URL='postgresql+psycopg://nobody:nobody@127.0.0.1:1/nodb' \
+            -e ENVIRONMENT=test -e WEATHER_PROVIDER=fixture -e LLM_PROVIDER=none \
+            weather-outliers-backend:ci \
+            python -c "import app, app.main, app.pipeline; print('app resolved to', list(app.__path__))"
+
+      - name: The backend image's `app` is not shadowed by an installed copy
+        # A regular site-packages/app package wins over the /app/app namespace
+        # package whatever sys.path says, and the failure mode is a clean build
+        # followed by `Could not import module "app.main"`.
+        run: |
+          docker run --rm weather-outliers-backend:ci \
+            python -c "import app, sys; p = list(app.__path__); sys.exit(None if p == ['/app/app'] else f'app resolved to {p}, expected [/app/app]')"
+
+      - name: The worker entrypoint runs in the backend image
+        run: |
+          docker run --rm \
+            -e DATABASE_URL='postgresql+psycopg://nobody:nobody@127.0.0.1:1/nodb' \
+            -e ENVIRONMENT=test \
+            weather-outliers-backend:ci \
+            python -m app.pipeline --help
+
+      # Any HTTP status counts. Without a backend the pages render an error state,
+      # which is correct behaviour; what is being tested is that the standalone
+      # server was assembled completely and is listening on 0.0.0.0 rather than
+      # only on its own loopback — the two mistakes this image can actually make.
+      - name: The website container serves HTTP
+        run: |
+          docker run -d --name web -p 3000:3000 weather-outliers-web:ci
+          for i in $(seq 1 30); do
+            status=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/ || true)
+            if [ -n "$status" ] && [ "$status" != "000" ]; then
+              echo "answered with HTTP $status after ${i}s"
+              docker rm -f web >/dev/null
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "the website container never answered on port 3000"
+          docker logs web
+          docker rm -f web >/dev/null
+          exit 1
