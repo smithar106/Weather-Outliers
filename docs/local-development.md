@@ -187,6 +187,12 @@ in a real browser; the capture of it is not part of the committed set.
   `data/` and `evals/` on the path.
 * **An empty board is usually missing baselines, not a bug.** Check
   `python -m app.pipeline status` before reading any statistics code.
+* **The page keeps showing the old board for up to ten minutes after a run.** That
+  is `REVALIDATE_SECONDS = 600` in `frontend/src/lib/api.ts` doing its job: the
+  pages are `force-dynamic`, so they re-render per request, but the `fetch` results
+  come from Next's Data Cache. Publishing a new board and immediately screenshotting
+  it photographs the *previous* one. To see a new run at once, clear
+  `frontend/.next/cache/fetch-cache` and restart the server — or just wait.
 
 ## One deliberate omission: no root `loading.tsx`
 

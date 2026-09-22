@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-09-22T17:40:05.369Z",
+  "captured_at": "2026-09-22T18:20:07.259Z",
   "base_url": "http://127.0.0.1:3050",
   "viewport": {
     "width": 1440,
@@ -8,7 +8,7 @@
   "device_scale_factor": 1,
   "data": {
     "analysis_date": "2026-09-21",
-    "published_at": "2026-09-22T13:35:09.015259-04:00",
+    "published_at": "2026-09-22T14:16:52.824731-04:00",
     "methodology_version": "1.0.0",
     "source_datasets": [
       "open_meteo_best_match_analysis"
@@ -17,7 +17,7 @@
       "provisional"
     ],
     "events_published": 10,
-    "distinct_cities": 8
+    "distinct_cities": 10
   },
   "shots": [
     {
@@ -28,7 +28,7 @@
     },
     {
       "name": "city",
-      "url": "http://127.0.0.1:3050/city/ca-calgary-ab",
+      "url": "http://127.0.0.1:3050/city/mx-cancun-roo",
       "file": "docs/screenshots/city.png",
       "console_errors": []
     },
