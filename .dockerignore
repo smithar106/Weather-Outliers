@@ -36,7 +36,9 @@ credentials*.json
 
 # ---- Large artefacts nothing in a running container reads ----
 docs/screenshots
-# Neither image copies the harness: the API does not read it, and the frontend
-# renders a committed copy of the report (frontend/src/data/evaluation-report.json).
-# Excluded from the context so a build never uploads it.
-evals
+# The backend image does not copy the harness at all. The frontend image copies
+# only evals/reports/latest.json, which its prebuild step prefers over the
+# committed copy so the deployed /evaluation page belongs to the deployed commit.
+# Everything else under evals/reports/ is a dated artefact no build needs.
+evals/reports/*.json
+!evals/reports/latest.json

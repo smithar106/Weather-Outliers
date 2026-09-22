@@ -1,7 +1,11 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
   "_comment": [
-    "Config-as-code for the scheduled pipeline worker. Same image as the API,",
+    "The intended settings for the scheduled pipeline worker, in version control.",
+    "As with the other two: Railway reads config-as-code from the repository root,",
+    "so set RAILWAY_DOCKERFILE_PATH=backend/Dockerfile on the service instead.",
+    "",
+    "Same image as the API,",
     "different command and no health check: this service starts, does a day's",
     "work and exits, so a health probe would report it down every time it",
     "succeeded.",

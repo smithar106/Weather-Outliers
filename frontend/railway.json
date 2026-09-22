@@ -1,9 +1,15 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
   "_comment": [
-    "Config-as-code for the public website. Leave the service's root directory at",
-    "the repository root: frontend/Dockerfile copies evals/reports/ so the",
-    "deployed evaluation page belongs to the deployed commit.",
+    "The intended settings for the public website, in version control. Railway",
+    "reads config-as-code from the repository root only, so the setting that takes",
+    "effect is the service variable RAILWAY_DOCKERFILE_PATH=frontend/Dockerfile.",
+    "See docs/deployment.md.",
+    "",
+    "Leave the service's root directory at",
+    "the repository root: frontend/Dockerfile copies evals/reports/latest.json,",
+    "which lives outside frontend/, so the deployed evaluation page belongs to",
+    "the deployed commit rather than to whenever the report was last committed.",
     "",
     "No build-time variables. Every data page is force-dynamic, so the image",
     "builds without a reachable backend, and API_BASE_URL is read at runtime —",
