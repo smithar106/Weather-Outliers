@@ -3,9 +3,10 @@
 # deliberate — the pipeline and the API must agree about the methodology version
 # and the schema, and separate images are how they drift apart.
 #
-# Build context is the repository root, not backend/, so that `evals/` can be
-# copied in: the API serves the evaluation report and the worker can run the
-# harness. Build with:
+# Build context is the repository root, not backend/, because the city registry
+# lives in `data/` outside the backend directory and both the API and the pipeline
+# read it. `evals/` is deliberately NOT copied: nothing in `app/` reads it, and the
+# harness needs the dev extras this image does not install. Build with:
 #
 #   docker build -f backend/Dockerfile -t weather-outliers-backend .
 
@@ -32,8 +33,6 @@ COPY backend/alembic ./alembic
 COPY backend/alembic.ini ./alembic.ini
 # The city registry is data the application reads at seed time, not a fixture.
 COPY data ./data
-# The evaluation report the API serves, plus the harness the worker can rerun.
-COPY evals ./evals
 
 # Run as a non-root user. The container writes nothing outside /tmp.
 RUN useradd --create-home --uid 10001 appuser \

@@ -99,7 +99,7 @@ the private network and off the metered egress path.
 
 | Setting | Value |
 | --- | --- |
-| Root directory | `/` (the Dockerfile copies `data/` and `evals/`, so the build context must be the repo root) |
+| Root directory | `/` (the Dockerfile copies `data/`, which sits outside `backend/`, so the build context must be the repo root) |
 | **Builder** | **`Dockerfile`** — see the warning below |
 | Dockerfile path | `backend/Dockerfile` |
 | Start command | *(leave empty — the image's `CMD` reads `$PORT`)* |

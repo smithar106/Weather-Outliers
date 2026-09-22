@@ -36,5 +36,7 @@ credentials*.json
 
 # ---- Large artefacts nothing in a running container reads ----
 docs/screenshots
-evals/reports/*.json
-!evals/reports/latest.json
+# Neither image copies the harness: the API does not read it, and the frontend
+# renders a committed copy of the report (frontend/src/data/evaluation-report.json).
+# Excluded from the context so a build never uploads it.
+evals
