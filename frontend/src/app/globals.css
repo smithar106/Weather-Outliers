@@ -1,0 +1,214 @@
+@import "tailwindcss";
+
+/*
+ * Design intent: a weather intelligence desk, not a consumer weather app. Deep
+ * navy ground, one cool accent, colour reserved almost entirely for encoding the
+ * weather category of a ranked event. Numbers are set in a monospace face so
+ * columns of figures line up and a reader can compare them by eye — which is the
+ * whole point of a site whose claim is that the arithmetic is auditable.
+ */
+
+@theme {
+  /* Ground */
+  --color-ink-950: #060912;
+  --color-ink-900: #0a0f1c;
+  --color-ink-850: #0e1526;
+  --color-ink-800: #131c32;
+  --color-ink-750: #18223c;
+  --color-ink-700: #1e2a47;
+  --color-ink-600: #2a3a5e;
+
+  /* Type */
+  --color-paper: #eaeff9;
+  --color-paper-dim: #b6c2d8;
+  --color-paper-muted: #8494b1;
+  --color-paper-faint: #5d6c88;
+
+  /* One accent, used for interaction and emphasis only */
+  --color-accent: #6cb8f7;
+  --color-accent-bright: #a3d4fb;
+  --color-accent-dim: #2d5f8f;
+
+  /* Weather categories. Kept in sync with CATEGORY_STYLES in lib/format.ts. */
+  --color-heat: #ff6b4a;
+  --color-cold: #56b4f5;
+  --color-temperature: #a78bfa;
+  --color-precipitation: #22c7b8;
+  --color-wind: #e8c84a;
+
+  --color-positive: #4ade80;
+  --color-warning: #fbbf24;
+  --color-negative: #fb7185;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  --radius-card: 0.875rem;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    /* Reserve the scrollbar gutter so navigating between a long and a short page
+       does not shift the layout horizontally. */
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    background-color: var(--color-ink-950);
+    color: var(--color-paper);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /*
+   * A faint radial wash at the top of the page. Purely atmospheric, and behind
+   * everything, so it can never reduce text contrast.
+   */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(90rem 40rem at 50% -14rem, rgba(108, 184, 247, 0.1), transparent 70%),
+      radial-gradient(60rem 30rem at 85% 5%, rgba(167, 139, 250, 0.06), transparent 70%);
+  }
+
+  /* Tabular figures everywhere a number appears, so columns align. */
+  .tnum {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background: rgba(108, 184, 247, 0.28);
+  }
+}
+
+@layer components {
+  .surface {
+    background-color: color-mix(in oklab, var(--color-ink-850) 92%, transparent);
+    border: 1px solid var(--color-ink-700);
+    border-radius: var(--radius-card);
+  }
+
+  /* Small uppercase label above a value or a section. */
+  .eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-paper-muted);
+  }
+
+  .link-underline {
+    text-decoration: underline;
+    text-decoration-color: var(--color-accent-dim);
+    text-underline-offset: 3px;
+    transition: text-decoration-color 150ms ease;
+  }
+  .link-underline:hover {
+    text-decoration-color: var(--color-accent);
+  }
+
+  /* Long-form prose blocks on the methodology page. */
+  .prose-desk {
+    color: var(--color-paper-dim);
+    line-height: 1.7;
+  }
+  .prose-desk p + p {
+    margin-top: 0.85rem;
+  }
+  .prose-desk strong {
+    color: var(--color-paper);
+    font-weight: 600;
+  }
+  .prose-desk code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--color-ink-800);
+    border: 1px solid var(--color-ink-700);
+    border-radius: 0.3rem;
+    padding: 0.08em 0.35em;
+    color: var(--color-accent-bright);
+  }
+}
+
+/*
+ * MapLibre ships its own light-themed controls and popup chrome. These overrides
+ * restyle them for a dark surface; the attribution control is deliberately left
+ * fully legible because the tile and data licences require it to be visible.
+ */
+.maplibregl-popup-content {
+  background: var(--color-ink-850);
+  color: var(--color-paper);
+  border: 1px solid var(--color-ink-700);
+  border-radius: 0.75rem;
+  padding: 0;
+  box-shadow: 0 18px 50px -12px rgba(0, 0, 0, 0.7);
+}
+.maplibregl-popup-close-button {
+  color: var(--color-paper-muted);
+  font-size: 1.15rem;
+  padding: 0.25rem 0.5rem;
+}
+.maplibregl-popup-close-button:hover {
+  background: transparent;
+  color: var(--color-paper);
+}
+.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+  border-bottom-color: var(--color-ink-700);
+}
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+  border-top-color: var(--color-ink-700);
+}
+.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: var(--color-ink-700);
+}
+.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: var(--color-ink-700);
+}
+.maplibregl-ctrl-group {
+  background: var(--color-ink-850);
+  border: 1px solid var(--color-ink-700);
+}
+.maplibregl-ctrl-group button + button {
+  border-top-color: var(--color-ink-700);
+}
+.maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1) brightness(1.4);
+}
+.maplibregl-ctrl-attrib {
+  background: rgba(6, 9, 18, 0.82) !important;
+  color: var(--color-paper-dim) !important;
+}
+.maplibregl-ctrl-attrib a {
+  color: var(--color-accent-bright) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

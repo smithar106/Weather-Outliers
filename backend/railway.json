@@ -1,0 +1,24 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "_comment": [
+    "Config-as-code for the backend API service. Point the service's 'Config as",
+    "code' path at backend/railway.json and leave its root directory at the",
+    "repository root: backend/Dockerfile copies data/ and evals/, so the build",
+    "context has to be the repo root, not backend/.",
+    "",
+    "The worker services use the SAME image and override only the start command;",
+    "see worker.railway.json and docs/deployment.md. No start command is set here",
+    "because the image's CMD already binds $PORT."
+  ],
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "backend/Dockerfile"
+  },
+  "deploy": {
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 30,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 5,
+    "numReplicas": 1
+  }
+}

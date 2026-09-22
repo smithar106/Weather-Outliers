@@ -1,0 +1,947 @@
+{
+  "generated_at": "2026-09-22T17:32:01+00:00",
+  "git_commit": null,
+  "git_dirty": false,
+  "methodology_version": "1.0.0",
+  "status": "passed",
+  "environment": {
+    "python": "3.13.5",
+    "platform": "Darwin 25.6.0 (arm64)",
+    "weather_provider": "synthetic_fixture_v1",
+    "llm_mode": "deterministic_templates_only",
+    "database": "sqlite (in-memory scratch)"
+  },
+  "totals": {
+    "suites_total": 4,
+    "suites_passed": 4,
+    "cases_total": 62,
+    "cases_passed": 62,
+    "duration_ms": 27041
+  },
+  "suites": [
+    {
+      "id": "unit_tests",
+      "title": "Backend test suite",
+      "description": "Runs the backend pytest suite and parses pytest's own JUnit XML. Covers the statistical engine, the grounding guards, the pipeline, and the HTTP API.",
+      "status": "passed",
+      "duration_ms": 15005,
+      "metrics": [
+        {
+          "label": "Tests collected",
+          "value": 251,
+          "unit": "tests",
+          "detail": null
+        },
+        {
+          "label": "Tests passed",
+          "value": 251,
+          "unit": "tests",
+          "detail": null
+        },
+        {
+          "label": "Failures",
+          "value": 0,
+          "unit": "tests",
+          "detail": null
+        },
+        {
+          "label": "Errors",
+          "value": 0,
+          "unit": "tests",
+          "detail": null
+        },
+        {
+          "label": "Skipped",
+          "value": 0,
+          "unit": "tests",
+          "detail": null
+        },
+        {
+          "label": "Pass rate",
+          "value": 1.0,
+          "unit": "fraction",
+          "detail": null
+        },
+        {
+          "label": "Test wall-clock",
+          "value": 13.48,
+          "unit": "s",
+          "detail": "as measured by pytest, excluding interpreter startup"
+        },
+        {
+          "label": "Test modules",
+          "value": 5,
+          "unit": "files",
+          "detail": null
+        },
+        {
+          "label": "Exit code",
+          "value": 0,
+          "unit": null,
+          "detail": "0 means pytest itself reported success"
+        }
+      ],
+      "cases": [
+        {
+          "id": "tests/test_agent_investigator.py",
+          "title": "tests/test_agent_investigator.py",
+          "passed": true,
+          "category": "test_module",
+          "expected": "all tests pass",
+          "observed": "31/31 passed",
+          "detail": null
+        },
+        {
+          "id": "tests/test_api.py",
+          "title": "tests/test_api.py",
+          "passed": true,
+          "category": "test_module",
+          "expected": "all tests pass",
+          "observed": "46/46 passed",
+          "detail": null
+        },
+        {
+          "id": "tests/test_pipeline.py",
+          "title": "tests/test_pipeline.py",
+          "passed": true,
+          "category": "test_module",
+          "expected": "all tests pass",
+          "observed": "33/33 passed",
+          "detail": null
+        },
+        {
+          "id": "tests/test_provider_quota.py",
+          "title": "tests/test_provider_quota.py",
+          "passed": true,
+          "category": "test_module",
+          "expected": "all tests pass",
+          "observed": "18/18 passed",
+          "detail": null
+        },
+        {
+          "id": "tests/test_stats.py",
+          "title": "tests/test_stats.py",
+          "passed": true,
+          "category": "test_module",
+          "expected": "all tests pass",
+          "observed": "123/123 passed",
+          "detail": null
+        }
+      ],
+      "cases_total": 5,
+      "cases_passed": 5,
+      "notes": [],
+      "error": null
+    },
+    {
+      "id": "grounding",
+      "title": "Grounding guards",
+      "description": "Replays labelled explanation cases through the production guards, then re-validates every explanation the pipeline published against the numbers its read-only tools return.",
+      "status": "passed",
+      "duration_ms": 48,
+      "metrics": [
+        {
+          "label": "Labelled cases",
+          "value": 15,
+          "unit": "cases",
+          "detail": null
+        },
+        {
+          "label": "Correct verdicts",
+          "value": 15,
+          "unit": "cases",
+          "detail": "accept/reject decision matched the label"
+        },
+        {
+          "label": "Verdict accuracy",
+          "value": 1.0,
+          "unit": "fraction",
+          "detail": null
+        },
+        {
+          "label": "Rejection recall",
+          "value": 1.0,
+          "unit": "fraction",
+          "detail": "share of defective explanations that were rejected"
+        },
+        {
+          "label": "Rejection precision",
+          "value": 1.0,
+          "unit": "fraction",
+          "detail": "share of rejections that were of genuinely defective explanations"
+        },
+        {
+          "label": "False acceptances",
+          "value": 0,
+          "unit": "cases",
+          "detail": "defective prose that would have been published"
+        },
+        {
+          "label": "False rejections",
+          "value": 0,
+          "unit": "cases",
+          "detail": "faithful prose that would have been discarded"
+        },
+        {
+          "label": "Correct violation reasons",
+          "value": 1.0,
+          "unit": "fraction",
+          "detail": "rejections that cited the defect the case was built around"
+        },
+        {
+          "label": "Published explanations checked",
+          "value": 10,
+          "unit": "explanations",
+          "detail": null
+        },
+        {
+          "label": "Published explanations passing guards",
+          "value": 10,
+          "unit": "explanations",
+          "detail": "re-validated against the numbers the read-only tools return"
+        },
+        {
+          "label": "Model-written",
+          "value": 0,
+          "unit": "explanations",
+          "detail": "the rest are deterministic templates"
+        },
+        {
+          "label": "Explanation source",
+          "value": "deterministic_templates_only",
+          "unit": null,
+          "detail": null
+        }
+      ],
+      "cases": [
+        {
+          "id": "clean_temperature_above",
+          "title": "Faithful temperature explanation is accepted",
+          "passed": true,
+          "category": "clean",
+          "expected": "accepted",
+          "observed": "accepted",
+          "detail": null
+        },
+        {
+          "id": "clean_precipitation_zero_inflated",
+          "title": "Zero-inflated precipitation explanation is accepted",
+          "passed": true,
+          "category": "clean",
+          "expected": "accepted",
+          "observed": "accepted",
+          "detail": "Also checks the guard does not fire on the ordinary verb 'recorded', which contains the banned token 'record'."
+        },
+        {
+          "id": "clean_negated_record_disclaimer",
+          "title": "A negated record disclaimer is permitted",
+          "passed": true,
+          "category": "clean",
+          "expected": "accepted",
+          "observed": "accepted",
+          "detail": "The caveats field is supposed to say this is not an official record. If the guard flagged that, it would be unusable. negated terms allowed: record, records"
+        },
+        {
+          "id": "clean_rounded_probability_as_percentage",
+          "title": "Restating a probability as a percentage is permitted",
+          "passed": true,
+          "category": "clean",
+          "expected": "accepted",
+          "observed": "accepted",
+          "detail": "0.22% and 1-in-455 are faithful readings of a tail probability of 0.0022, not new facts."
+        },
+        {
+          "id": "fabricated_percentile",
+          "title": "An invented percentile is rejected",
+          "passed": true,
+          "category": "fabricated_number",
+          "expected": "rejected with ungrounded_number",
+          "observed": "rejected (ungrounded_number:99.97)",
+          "detail": null
+        },
+        {
+          "id": "fabricated_return_period",
+          "title": "An inflated return period is rejected",
+          "passed": true,
+          "category": "fabricated_number",
+          "expected": "rejected with ungrounded_number",
+          "observed": "rejected (ungrounded_number:250)",
+          "detail": null
+        },
+        {
+          "id": "fabricated_evidence_row",
+          "title": "A fabricated evidence row is rejected even when the prose is clean",
+          "passed": true,
+          "category": "fabricated_number",
+          "expected": "rejected with ungrounded_evidence_value",
+          "observed": "rejected (ungrounded_evidence_value:61.4)",
+          "detail": "The prose cites only real figures; the structured evidence claims a baseline the tools never returned."
+        },
+        {
+          "id": "record_all_time_claim",
+          "title": "An all-time claim is rejected",
+          "passed": true,
+          "category": "record_claim",
+          "expected": "rejected with unsupported_record_claim",
+          "observed": "rejected (unsupported_record_claim:all-time)",
+          "detail": null
+        },
+        {
+          "id": "record_broken_claim",
+          "title": "Claiming a record was broken is rejected",
+          "passed": true,
+          "category": "record_claim",
+          "expected": "rejected with unsupported_record_claim",
+          "observed": "rejected (unsupported_record_claim:record)",
+          "detail": "No records archive is consulted anywhere in this project, so any such claim is ungrounded by construction."
+        },
+        {
+          "id": "causal_named_phenomenon",
+          "title": "A named weather system is rejected",
+          "passed": true,
+          "category": "causal_claim",
+          "expected": "rejected with unsupported_causal_claim",
+          "observed": "rejected (unsupported_causal_claim:heat dome)",
+          "detail": "No tool returns synoptic data, so naming a system is ungrounded however plausible it is."
+        },
+        {
+          "id": "causal_attribution_phrase",
+          "title": "An asserted cause is rejected",
+          "passed": true,
+          "category": "causal_claim",
+          "expected": "rejected with unsupported_causal_claim",
+          "observed": "rejected (unsupported_causal_claim:caused by; unsupported_causal_claim:was caused)",
+          "detail": null
+        },
+        {
+          "id": "source_named_organisation",
+          "title": "Citing an outside organisation is rejected",
+          "passed": true,
+          "category": "source_reference",
+          "expected": "rejected with unsupported_source_reference",
+          "observed": "rejected (unsupported_source_reference:noaa)",
+          "detail": null
+        },
+        {
+          "id": "source_url",
+          "title": "A URL is rejected",
+          "passed": true,
+          "category": "source_reference",
+          "expected": "rejected with unsupported_source_reference",
+          "observed": "rejected (unsupported_source_reference:url)",
+          "detail": null
+        },
+        {
+          "id": "missing_observed_value",
+          "title": "An explanation that never states the measurement is rejected",
+          "passed": true,
+          "category": "missing_evidence",
+          "expected": "rejected with required_number_missing",
+          "observed": "rejected (required_number_missing:45.6)",
+          "detail": null
+        },
+        {
+          "id": "wrong_city_named",
+          "title": "Prose about the wrong city is rejected",
+          "passed": true,
+          "category": "wrong_city",
+          "expected": "rejected with required_term_missing",
+          "observed": "rejected (required_term_missing:Phoenix)",
+          "detail": "Guards against a mix-up between events investigated in the same run."
+        },
+        {
+          "id": "published:2025-07-15_ca-calgary-ab_temp_max@1.0.0",
+          "title": "#1 Calgary \u2014 temp_max (template)",
+          "passed": true,
+          "category": "published_explanation",
+          "expected": "every number citable from the tools",
+          "observed": "21/21 numbers grounded",
+          "detail": null
+        },
+        {
+          "id": "published:2025-07-15_us-buffalo-ny_wind_gust@1.0.0",
+          "title": "#2 Buffalo \u2014 wind_gust (template)",
+          "passed": true,
+          "category": "published_explanation",
+          "expected": "every number citable from the tools",
+          "observed": "21/21 numbers grounded",
+          "detail": null
+        },
+        {
+          "id": "published:2025-07-15_us-fargo-nd_precipitation@1.0.0",
+          "title": "#3 Fargo \u2014 precipitation (template)",
+          "passed": true,
+          "category": "published_explanation",
+          "expected": "every number citable from the tools",
+          "observed": "22/22 numbers grounded",
+          "detail": null
+        },
+        {
+          "id": "published:2025-07-15_us-albuquerque-nm_temp_max@1.0.0",
+          "title": "#4 Albuquerque \u2014 temp_max (template)",
+          "passed": true,
+          "category": "published_explanation",
+          "expected": "every number citable from the tools",
+          "observed": "21/21 numbers grounded",
+          "detail": null
+        },
+        {
+          "id": "published:2025-07-15_us-nashville-tn_wind_gust@1.0.0",
+          "title": "#5 Nashville \u2014 wind_gust (template)",
+          "passed": true,
+          "category": "published_explanation",
+          "expected": "every number citable from the tools",
+          "observed": "21/21 numbers grounded",
+          "detail": null
+        },
+        {
+          "id": "published:2025-07-15_ca-regina-sk_temp_min@1.0.0",
+          "title": "#6 Regina \u2014 temp_min (template)",
+          "passed": true,
+          "category": "published_explanation",
+          "expected": "every number citable from the tools",
+          "observed": "21/21 numbers grounded",
+          "detail": null
+        },
+        {
+          "id": "published:2025-07-15_mx-cancun-roo_wind_gust@1.0.0",
+          "title": "#7 Canc\u00fan \u2014 wind_gust (template)",
+          "passed": true,
+          "category": "published_explanation",
+          "expected": "every number citable from the tools",
+          "observed": "21/21 numbers grounded",
+          "detail": null
+        },
+        {
+          "id": "published:2025-07-15_us-las-vegas-nv_precipitation@1.0.0",
+          "title": "#8 Las Vegas \u2014 precipitation (template)",
+          "passed": true,
+          "category": "published_explanation",
+          "expected": "every number citable from the tools",
+          "observed": "21/21 numbers grounded",
+          "detail": null
+        },
+        {
+          "id": "published:2025-07-15_mx-merida-yuc_temp_min@1.0.0",
+          "title": "#9 M\u00e9rida \u2014 temp_min (template)",
+          "passed": true,
+          "category": "published_explanation",
+          "expected": "every number citable from the tools",
+          "observed": "20/20 numbers grounded",
+          "detail": null
+        },
+        {
+          "id": "published:2025-07-15_us-phoenix-az_temp_max@1.0.0",
+          "title": "#10 Phoenix \u2014 temp_max (template)",
+          "passed": true,
+          "category": "published_explanation",
+          "expected": "every number citable from the tools",
+          "observed": "20/20 numbers grounded",
+          "detail": null
+        }
+      ],
+      "cases_total": 25,
+      "cases_passed": 25,
+      "notes": [
+        "No LLM key configured: this run measured the guards and the deterministic templates. It makes no claim about any model's accuracy."
+      ],
+      "error": null
+    },
+    {
+      "id": "reproducibility",
+      "title": "Pipeline reproducibility",
+      "description": "Runs the pipeline repeatedly over one synthetic date \u2014 twice in one database and once in a fresh one \u2014 and compares every stored statistic. Also verifies that a failing run leaves the published board alone.",
+      "status": "passed",
+      "duration_ms": 11767,
+      "metrics": [
+        {
+          "label": "Cities analysed",
+          "value": 10,
+          "unit": "cities",
+          "detail": null
+        },
+        {
+          "label": "Data completeness",
+          "value": 1.0,
+          "unit": "fraction",
+          "detail": "cities with a usable observation for the analysed date"
+        },
+        {
+          "label": "Events computed",
+          "value": 50,
+          "unit": "events",
+          "detail": null
+        },
+        {
+          "label": "Events published",
+          "value": 10,
+          "unit": "events",
+          "detail": null
+        },
+        {
+          "label": "Events ineligible",
+          "value": 13,
+          "unit": "events",
+          "detail": "computed but excluded from the board by a documented rule"
+        },
+        {
+          "label": "Fields compared per board pair",
+          "value": 290,
+          "unit": "fields",
+          "detail": null
+        },
+        {
+          "label": "Differences across reruns",
+          "value": 0,
+          "unit": "fields",
+          "detail": null
+        },
+        {
+          "label": "Differences across databases",
+          "value": 0,
+          "unit": "fields",
+          "detail": null
+        },
+        {
+          "label": "Pipeline runs recorded",
+          "value": 4,
+          "unit": "runs",
+          "detail": null
+        },
+        {
+          "label": "Pipeline completion rate",
+          "value": 1.0,
+          "unit": "fraction",
+          "detail": "3 of 3 runs given a working provider succeeded. A further 1 run was failed on purpose to test atomic publish and is excluded from the rate."
+        },
+        {
+          "label": "Runs that failed",
+          "value": 1,
+          "unit": "runs",
+          "detail": "all of them deliberately injected by this suite"
+        },
+        {
+          "label": "Baseline build",
+          "value": 7935,
+          "unit": "ms",
+          "detail": "18250 cached rows from 30 provider requests, done once rather than daily"
+        },
+        {
+          "label": "Daily run end to end",
+          "value": 31,
+          "unit": "ms",
+          "detail": "fetch, score, rank, explain, publish \u2014 against the synthetic provider and an in-memory database, so this is a floor, not a production figure"
+        },
+        {
+          "label": "Fresh world build",
+          "value": 11732,
+          "unit": "ms",
+          "detail": null
+        },
+        {
+          "label": "Weather requests per daily run",
+          "value": 10,
+          "unit": "requests",
+          "detail": "one per city; the cost driver the baseline cache exists to avoid multiplying by thirty years"
+        },
+        {
+          "label": "Weather requests to build the cache",
+          "value": 30,
+          "unit": "requests",
+          "detail": "paid once, not daily"
+        },
+        {
+          "label": "LLM calls per daily run",
+          "value": 0,
+          "unit": "calls",
+          "detail": "bounded by AGENT_INVESTIGATE_TOP_N and the monthly ceiling; zero here because no key was configured"
+        },
+        {
+          "label": "Estimated LLM spend per run",
+          "value": 0.0,
+          "unit": "USD",
+          "detail": "derived from configured token prices. With no prices configured this is 0.0 and means 'not priced', not 'free'."
+        }
+      ],
+      "cases": [
+        {
+          "id": "rerun_same_database",
+          "title": "Rerunning the same date reproduces the board exactly",
+          "passed": true,
+          "category": "determinism",
+          "expected": "290 fields identical",
+          "observed": "identical",
+          "detail": null
+        },
+        {
+          "id": "fresh_database",
+          "title": "A database built from scratch produces the same board",
+          "passed": true,
+          "category": "determinism",
+          "expected": "290 fields identical",
+          "observed": "identical",
+          "detail": null
+        },
+        {
+          "id": "idempotent_events",
+          "title": "Rerunning a date creates no duplicate events",
+          "passed": true,
+          "category": "idempotency",
+          "expected": "50 events before and after",
+          "observed": "50 events after the rerun",
+          "detail": "Event ids are derived from (date, city, metric, methodology version)."
+        },
+        {
+          "id": "failed_run_does_not_publish",
+          "title": "A run whose provider fails does not publish",
+          "passed": true,
+          "category": "atomicity",
+          "expected": "run status failed, published false",
+          "observed": "PipelineError: data completeness 0.0% is below the required 80.0% (0/10 cities). Refusing to publish; the previous ranking is unchanged.",
+          "detail": null
+        },
+        {
+          "id": "failed_run_preserves_board",
+          "title": "The previously published board survives a failed run",
+          "passed": true,
+          "category": "atomicity",
+          "expected": "board unchanged",
+          "observed": "unchanged",
+          "detail": null
+        }
+      ],
+      "cases_total": 5,
+      "cases_passed": 5,
+      "notes": [
+        "Runs against synthetic_fixture_v1, a deterministic function of (city, date). This measures reproducibility of the machinery, not accuracy of real weather."
+      ],
+      "error": null
+    },
+    {
+      "id": "api_contract",
+      "title": "Public API contract",
+      "description": "Exercises every public endpoint over the published board, then compares the served JSON against the stored calculations field by field.",
+      "status": "passed",
+      "duration_ms": 221,
+      "metrics": [
+        {
+          "label": "Endpoints exercised",
+          "value": 9,
+          "unit": "endpoints",
+          "detail": "/api/cities, /api/cities/{city_id}, /api/cities/{city_id}/history, /api/events/{event_id}, /api/methodology, /api/rankings, /api/rankings/latest, /api/rankings/{analysis_date}, /health"
+        },
+        {
+          "label": "Requests issued",
+          "value": 18,
+          "unit": "requests",
+          "detail": null
+        },
+        {
+          "label": "Median response",
+          "value": 2.33,
+          "unit": "ms",
+          "detail": "in-process client over in-memory SQLite; a floor for production, not a production measurement"
+        },
+        {
+          "label": "Slowest response",
+          "value": 7.7,
+          "unit": "ms",
+          "detail": null
+        },
+        {
+          "label": "Board rows served",
+          "value": 10,
+          "unit": "events",
+          "detail": null
+        },
+        {
+          "label": "Fields cross-checked against the database",
+          "value": 150,
+          "unit": "fields",
+          "detail": null
+        },
+        {
+          "label": "Mismatches",
+          "value": 0,
+          "unit": "fields",
+          "detail": null
+        },
+        {
+          "label": "Cities served",
+          "value": 10,
+          "unit": "cities",
+          "detail": null
+        },
+        {
+          "label": "History points served",
+          "value": 1,
+          "unit": "days",
+          "detail": null
+        },
+        {
+          "label": "Published dates in the archive",
+          "value": 1,
+          "unit": "dates",
+          "detail": null
+        }
+      ],
+      "cases": [
+        {
+          "id": "health",
+          "title": "Health endpoint answers",
+          "passed": true,
+          "category": "endpoint",
+          "expected": "GET /health \u2192 200",
+          "observed": "200 in 7.7 ms",
+          "detail": null
+        },
+        {
+          "id": "health_reports_publication",
+          "title": "Health reports the published analysis date",
+          "passed": true,
+          "category": "endpoint",
+          "expected": "latest_published_date == 2025-07-15",
+          "observed": "2025-07-15",
+          "detail": null
+        },
+        {
+          "id": "rankings_latest",
+          "title": "Latest board is served",
+          "passed": true,
+          "category": "endpoint",
+          "expected": "GET /api/rankings/latest \u2192 200",
+          "observed": "200 in 4.4 ms",
+          "detail": null
+        },
+        {
+          "id": "rankings_by_date",
+          "title": "Board for an explicit date is served",
+          "passed": true,
+          "category": "endpoint",
+          "expected": "GET /api/rankings/2025-07-15 \u2192 200",
+          "observed": "200 in 4.3 ms",
+          "detail": null
+        },
+        {
+          "id": "rankings_bad_date",
+          "title": "A malformed date is rejected, not crashed on",
+          "passed": true,
+          "category": "validation",
+          "expected": "GET /api/rankings/not-a-date \u2192 422",
+          "observed": "422 in 1.0 ms",
+          "detail": null
+        },
+        {
+          "id": "rankings_archive",
+          "title": "Archive of published dates is served",
+          "passed": true,
+          "category": "endpoint",
+          "expected": "GET /api/rankings \u2192 200",
+          "observed": "200 in 3.7 ms",
+          "detail": null
+        },
+        {
+          "id": "cities_list",
+          "title": "City registry is served",
+          "passed": true,
+          "category": "endpoint",
+          "expected": "GET /api/cities \u2192 200",
+          "observed": "200 in 1.7 ms",
+          "detail": null
+        },
+        {
+          "id": "city_detail",
+          "title": "City detail is served",
+          "passed": true,
+          "category": "endpoint",
+          "expected": "GET /api/cities/ca-calgary-ab \u2192 200",
+          "observed": "200 in 5.6 ms",
+          "detail": null
+        },
+        {
+          "id": "city_unknown",
+          "title": "An unknown city is a 404",
+          "passed": true,
+          "category": "validation",
+          "expected": "GET /api/cities/not-a-city \u2192 404",
+          "observed": "404 in 1.7 ms",
+          "detail": null
+        },
+        {
+          "id": "city_history",
+          "title": "City history is served",
+          "passed": true,
+          "category": "endpoint",
+          "expected": "GET /api/cities/ca-calgary-ab/history \u2192 200",
+          "observed": "200 in 3.4 ms",
+          "detail": null
+        },
+        {
+          "id": "city_history_has_points",
+          "title": "City history returns the days the pipeline stored",
+          "passed": true,
+          "category": "endpoint",
+          "expected": "at least one observation in the requested window",
+          "observed": "1 points",
+          "detail": null
+        },
+        {
+          "id": "event_detail",
+          "title": "Event detail is served",
+          "passed": true,
+          "category": "endpoint",
+          "expected": "GET /api/events/2025-07-15_ca-calgary-ab_temp_max@1.0.0 \u2192 200",
+          "observed": "200 in 3.2 ms",
+          "detail": null
+        },
+        {
+          "id": "event_unknown",
+          "title": "An unknown event is a 404",
+          "passed": true,
+          "category": "validation",
+          "expected": "GET /api/events/not-an-event \u2192 404",
+          "observed": "404 in 1.4 ms",
+          "detail": null
+        },
+        {
+          "id": "methodology",
+          "title": "Methodology is served from live configuration",
+          "passed": true,
+          "category": "endpoint",
+          "expected": "GET /api/methodology \u2192 200",
+          "observed": "200 in 1.5 ms",
+          "detail": null
+        },
+        {
+          "id": "read_only_post",
+          "title": "POST to a published resource is refused",
+          "passed": true,
+          "category": "read_only",
+          "expected": "POST /api/rankings/latest \u2192 405",
+          "observed": "405 in 0.3 ms",
+          "detail": null
+        },
+        {
+          "id": "read_only_put",
+          "title": "PUT to a published resource is refused",
+          "passed": true,
+          "category": "read_only",
+          "expected": "PUT /api/rankings/latest \u2192 405",
+          "observed": "405 in 0.3 ms",
+          "detail": null
+        },
+        {
+          "id": "read_only_patch",
+          "title": "PATCH to a published resource is refused",
+          "passed": true,
+          "category": "read_only",
+          "expected": "PATCH /api/rankings/latest \u2192 405",
+          "observed": "405 in 0.3 ms",
+          "detail": null
+        },
+        {
+          "id": "read_only_delete",
+          "title": "DELETE to a published resource is refused",
+          "passed": true,
+          "category": "read_only",
+          "expected": "DELETE /api/rankings/latest \u2192 405",
+          "observed": "405 in 0.4 ms",
+          "detail": null
+        },
+        {
+          "id": "pagination_clamped",
+          "title": "An oversized page request is clamped",
+          "passed": true,
+          "category": "bounded_query",
+          "expected": "GET /api/rankings \u2192 200",
+          "observed": "200 in 4.0 ms",
+          "detail": null
+        },
+        {
+          "id": "pagination_ceiling",
+          "title": "Page size never exceeds MAX_PAGE_SIZE",
+          "passed": true,
+          "category": "bounded_query",
+          "expected": "limit <= 200",
+          "observed": "200",
+          "detail": null
+        },
+        {
+          "id": "history_clamped",
+          "title": "An oversized history window is clamped",
+          "passed": true,
+          "category": "bounded_query",
+          "expected": "GET /api/cities/ca-calgary-ab/history \u2192 200",
+          "observed": "200 in 2.3 ms",
+          "detail": null
+        },
+        {
+          "id": "history_ceiling",
+          "title": "History window never exceeds MAX_HISTORY_DAYS",
+          "passed": true,
+          "category": "bounded_query",
+          "expected": "window <= 400 days",
+          "observed": "400 days",
+          "detail": null
+        },
+        {
+          "id": "cache_header",
+          "title": "Published responses are cacheable",
+          "passed": true,
+          "category": "caching",
+          "expected": "Cache-Control carries a max-age",
+          "observed": "public, max-age=300, stale-while-revalidate=600",
+          "detail": "Keeps normal page views off the database and away from any LLM."
+        },
+        {
+          "id": "served_matches_stored",
+          "title": "Every served figure equals the stored calculation",
+          "passed": true,
+          "category": "integrity",
+          "expected": "150 fields identical",
+          "observed": "identical",
+          "detail": null
+        },
+        {
+          "id": "latest_matches_explicit_date",
+          "title": "The latest board and the board for its date are the same payload",
+          "passed": true,
+          "category": "integrity",
+          "expected": "identical event lists",
+          "observed": "identical",
+          "detail": null
+        },
+        {
+          "id": "result_type_is_not_a_record",
+          "title": "Results are labelled statistical outliers, never records",
+          "passed": true,
+          "category": "integrity",
+          "expected": "result_type=statistical_outliers on the board and on every event",
+          "observed": "statistical_outliers",
+          "detail": "No official records archive is consulted anywhere in this project."
+        },
+        {
+          "id": "methodology_version_agrees",
+          "title": "Served methodology version matches the code",
+          "passed": true,
+          "category": "integrity",
+          "expected": "1.0.0",
+          "observed": "1.0.0",
+          "detail": null
+        }
+      ],
+      "cases_total": 27,
+      "cases_passed": 27,
+      "notes": [],
+      "error": null
+    }
+  ],
+  "limitations": [
+    "Every figure in this report was measured by the run that produced it. Nothing is hardcoded; a suite that cannot measure something reports null.",
+    "The pipeline, API and published-explanation checks run against 'synthetic_fixture_v1', a deterministic synthetic weather provider. They measure whether the machinery is correct and reproducible, not the accuracy of real weather data.",
+    "Latency figures come from an in-process client over an in-memory SQLite database. They are a floor for the deployed system, not a measurement of it.",
+    "Grounding accuracy is measured on a small hand-labelled case set. It quantifies the guards, not any language model's general reliability.",
+    "LLM spend is an estimate derived from configured token prices. When no prices are configured it reads 0.0, which means 'not priced' rather than 'free'.",
+    "The city registry is a curated sample of major North American cities. It is not a representative sample of the continent's climate, and the rankings are statistical outliers within that sample rather than records of any kind."
+  ]
+}

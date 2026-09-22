@@ -1,0 +1,36 @@
+{
+  "name": "weather-outliers-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Public dashboard for Weather Outliers: yesterday's most statistically unusual North American weather.",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "sync-evals": "node scripts/sync-evaluation-report.mjs",
+    "check-evals": "node scripts/sync-evaluation-report.mjs --check",
+    "prebuild": "npm run sync-evals",
+    "dev": "next dev --port 3050",
+    "build": "next build",
+    "start": "next start --port ${PORT:-3050}",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "maplibre-gl": "^6.10.0",
+    "next": "^16.3.5",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "^16.3.5",
+    "postcss": "^8.5.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.7.0"
+  }
+}

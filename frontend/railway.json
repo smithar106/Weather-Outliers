@@ -1,0 +1,23 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "_comment": [
+    "Config-as-code for the public website. Leave the service's root directory at",
+    "the repository root: frontend/Dockerfile copies evals/reports/ so the",
+    "deployed evaluation page belongs to the deployed commit.",
+    "",
+    "No build-time variables. Every data page is force-dynamic, so the image",
+    "builds without a reachable backend, and API_BASE_URL is read at runtime —",
+    "server-side only, never exposed to the browser."
+  ],
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "frontend/Dockerfile"
+  },
+  "deploy": {
+    "healthcheckPath": "/",
+    "healthcheckTimeout": 60,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 5,
+    "numReplicas": 1
+  }
+}

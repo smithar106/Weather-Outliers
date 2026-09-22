@@ -1,0 +1,161 @@
+# Continuous integration.
+#
+# Three independent jobs rather than one, so a frontend type error and a backend
+# test failure are reported together instead of the first one masking the second.
+#
+# What this deliberately does NOT do: call a weather provider, or call a language
+# model. Both are third-party services with quotas, and a test suite that depends
+# on them is a test suite that fails for reasons unrelated to the commit. The
+# fixture provider and the deterministic explanation path cover those code paths;
+# the live adapters are exercised by hand against the real API and the results are
+# recorded in docs/data-sources.md.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A force-push should not leave the previous run burning minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (lint + tests)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # Needed for one step only: applying the migrations. The test suite itself
+        # runs against in-memory SQLite (see backend/tests/conftest.py) because it
+        # is testing statistics and application logic, not SQL dialect. The
+        # migrations are the part that has to meet real PostgreSQL, so they do.
+        image: postgres:17
+        env:
+          POSTGRES_USER: weather
+          POSTGRES_PASSWORD: weather
+          POSTGRES_DB: weather_outliers_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      ENVIRONMENT: test
+      WEATHER_PROVIDER: fixture
+      DATABASE_URL: postgresql+psycopg://weather:weather@127.0.0.1:5432/weather_outliers_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check backend evals
+
+      - name: Migrations apply cleanly from empty
+        working-directory: backend
+        # Running the migrations rather than creating tables from the models is
+        # what catches a model change that was never given a migration.
+        run: alembic upgrade head
+
+      - name: Tests
+        working-directory: backend
+        run: pytest
+
+  evals:
+    name: Evaluation harness
+    runs-on: ubuntu-latest
+
+    # No database service: the harness builds its own world in an in-memory
+    # SQLite database (evals/environment.py) so that a run is hermetic and
+    # reproducible by construction — which is precisely what the
+    # `reproducibility` suite asserts.
+    env:
+      ENVIRONMENT: test
+      WEATHER_PROVIDER: fixture
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "./backend[dev]"
+
+      - name: Run the harness
+        # Exits non-zero if any suite fails. This is the job that proves the
+        # published board is reproducible and the grounding guards still work.
+        run: python -m evals.runner
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-report
+          path: evals/reports/latest.json
+          if-no-files-found: warn
+
+  frontend:
+    name: Frontend (lint + types + build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+
+      - name: Committed evaluation report matches the harness output
+        working-directory: frontend
+        # The evaluation page renders a committed copy of the report. If someone
+        # regenerates the report and forgets to sync it, the deployed page shows
+        # numbers from a different commit — so that is a build failure, not a
+        # detail.
+        run: npm run check-evals
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Typecheck
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Build
+        working-directory: frontend
+        # No API_BASE_URL: every data page is force-dynamic, so a successful build
+        # here also proves the site can be built without a reachable backend.
+        run: npm run build

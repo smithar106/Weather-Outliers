@@ -1,0 +1,87 @@
+# ---- Secrets / environment ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+!**/public/**/*.key
+secrets/
+service-account*.json
+credentials*.json
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib60/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.hypothesis/
+
+# ---- Node / Next.js ----
+node_modules/
+.next/
+out/
+.turbo/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ---- Local databases / caches ----
+*.sqlite
+*.sqlite3
+*.db
+!evals/fixtures/*.db
+.cache/
+tmp/
+.tmp/
+
+# ---- Pipeline artifacts (regenerable, sometimes large) ----
+data/cache/
+data/raw/
+evals/reports/*.json
+!evals/reports/.gitkeep
+# latest.json is the artefact the evaluation dashboard renders, so it is committed
+# on purpose. Ad-hoc reports written to any other name stay ignored.
+!evals/reports/latest.json
+# Screenshots ARE committed. They were ignored while they were 2x captures at ~2MB
+# each; the capture script now defaults to 1x, which is sharp at the width a README
+# renders them and small enough that six of them do not dominate the repository.
+# manifest.json records which provider produced the data behind each capture, so a
+# committed image cannot quietly misrepresent fixture data as real weather.
+
+# ---- Editors / OS ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*~

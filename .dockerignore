@@ -1,0 +1,40 @@
+# Both images build from the repository root, so this list is what keeps a
+# multi-hundred-megabyte build context from being sent to the daemon — and, more
+# importantly, what keeps a local .env out of an image.
+
+.git
+.github
+
+# ---- secrets: never in an image, regardless of .gitignore ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+service-account*.json
+credentials*.json
+
+# ---- Python ----
+**/__pycache__
+**/*.py[cod]
+**/.venv
+**/venv
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+**/*.egg-info
+**/.coverage
+**/htmlcov
+
+# ---- Node ----
+**/node_modules
+**/.next
+**/out
+**/*.tsbuildinfo
+**/npm-debug.log*
+
+# ---- Large artefacts nothing in a running container reads ----
+docs/screenshots
+evals/reports/*.json
+!evals/reports/latest.json

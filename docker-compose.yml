@@ -1,0 +1,79 @@
+# Local development stack: PostgreSQL, the API, the website.
+#
+# This is not the deployment topology — see docs/deployment.md for Railway. It
+# exists so that `docker compose up` gives a working copy of the whole application
+# on a machine with nothing installed but Docker.
+#
+#   docker compose up -d db          # just the database, if running the app natively
+#   docker compose up --build        # everything
+#
+# First run, in another terminal:
+#   docker compose exec api alembic upgrade head
+#   docker compose exec api python -m app.pipeline seed-cities
+#   docker compose exec api python -m app.pipeline build-baselines   # slow; see below
+#   docker compose exec api python -m app.pipeline run
+#
+# `build-baselines` fetches 30 years of history per city and is rate-limited by the
+# provider's free tier to a few cities a minute. It is resumable: rerun it until it
+# reports 50 cities. WEATHER_PROVIDER=fixture skips the network entirely and is the
+# right choice for working on the UI.
+
+name: weather-outliers
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: weather
+      POSTGRES_PASSWORD: weather
+      POSTGRES_DB: weather_outliers
+    ports:
+      # Exposed so a native backend or psql can reach it. Nothing else needs it:
+      # the other services talk to `db` over the compose network.
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # The API's first statement is a query, so starting it before Postgres is
+      # ready produces a crash loop that looks like a configuration error.
+      test: ["CMD-SHELL", "pg_isready -U weather -d weather_outliers"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+psycopg://weather:weather@db:5432/weather_outliers
+      # `fixture` needs no network and no quota. Switch to `open_meteo` for real
+      # data, and read docs/data-sources.md on the free-tier budget first.
+      WEATHER_PROVIDER: ${WEATHER_PROVIDER:-fixture}
+      OPEN_METEO_API_KEY: ${OPEN_METEO_API_KEY:-}
+      CORS_ALLOW_ORIGINS: http://localhost:3050
+      PORT: "8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    environment:
+      # Server-side fetches go over the compose network. The browser never calls
+      # the API directly for page data, so this address does not need to be
+      # reachable from the host.
+      API_BASE_URL: http://api:8000
+      PORT: "3050"
+    ports:
+      - "3050:3050"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

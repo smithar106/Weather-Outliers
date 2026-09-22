@@ -1,0 +1,29 @@
+# Lint configuration for repository-root Python that lives outside the backend
+# package — currently `evals/`. The backend has its own `[tool.ruff]` block in
+# `backend/pyproject.toml`; Ruff resolves the closest configuration, so that one
+# still governs `backend/`. The rule sets are kept identical on purpose: the
+# harness is held to the same standard as the code it evaluates.
+
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "C4", "SIM", "RUF"]
+ignore = [
+    "B008",   # FastAPI Depends() in defaults is the documented idiom
+    "RUF001", # ambiguous unicode: city names legitimately contain accents
+    "RUF002", # and prose in docstrings legitimately uses en dashes
+    "RUF003",
+    "SIM108", # ternaries are not always clearer
+]
+
+[lint.isort]
+# `app` and `evals` are both importable from the repository root once the backend
+# is installed, and Ruff cannot infer that from here. Declaring them keeps import
+# order identical to what `backend/pyproject.toml` produces inside `backend/`.
+known-first-party = ["app", "evals"]
+
+[lint.per-file-ignores]
+# The suites build long, self-documenting metric and case literals; wrapping them
+# to 100 columns costs more readability than it buys.
+"evals/suites/*" = ["E501"]
