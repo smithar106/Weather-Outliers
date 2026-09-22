@@ -37,7 +37,18 @@ import type {
  * ingress host always is.
  */
 function normalizeBaseUrl(raw: string): string {
-  const value = raw.trim().replace(/\/+$/, "");
+  // Strip trailing characters that cannot appear in a URL at all. Copying a
+  // domain out of a hosting dashboard tends to bring the link glyph with it —
+  // `weather-outliers-production.up.railway.app↗` was a real value here, and it
+  // fails as an unreachable API with no hint that the host has a stray arrow on
+  // the end. Leading/trailing whitespace, NBSP and zero-width characters come
+  // from the same place. The cost of this is that a genuine IDN host ending in a
+  // non-ASCII character would be truncated; nothing here has one, and an ASCII
+  // host is what every deployment target issues.
+  const value = raw
+    .replace(/[^\x21-\x7e]+$/u, "")
+    .trim()
+    .replace(/\/+$/, "");
   if (/^[a-z][a-z0-9+.-]*:\/\//i.test(value)) return value;
   const plaintext = /^(localhost|127\.0\.0\.1|\[::1\]|[^/]+\.railway\.internal)(:\d+)?$/i;
   return `${plaintext.test(value) ? "http" : "https"}://${value}`;
