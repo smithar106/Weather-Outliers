@@ -8,9 +8,10 @@
  * credential ever needs to reach the client bundle.
  *
  * `API_BASE_URL` should point at the backend's private address in production
- * (`http://backend.railway.internal:8000` on Railway), because nothing here needs
- * the public internet. `NEXT_PUBLIC_API_BASE_URL` is separate and is used only to
- * build links a human can click; it is never fetched from.
+ * (`http://<service>.railway.internal:8000` on Railway — the host follows the
+ * service's name), because nothing here needs the public internet.
+ * `NEXT_PUBLIC_API_BASE_URL` is separate and is used only to build links a human
+ * can click; it is never fetched from.
  */
 
 import type {
@@ -24,16 +25,34 @@ import type {
   Rankings,
 } from "@/lib/types";
 
-export const API_BASE_URL = (
+/**
+ * Accept a bare host as well as a full origin.
+ *
+ * This value is typed into a deployment dashboard by hand, and a missing scheme
+ * is the likely mistake: `new URL("example.up.railway.app/api/...")` throws
+ * `Invalid URL`, which is indistinguishable from the backend being down and says
+ * nothing about the cause. So a schemeless value gets one inferred rather than
+ * failing every page — `http` for loopback and for Railway's private network,
+ * which is not TLS-terminated, and `https` for anything else, because a public
+ * ingress host always is.
+ */
+function normalizeBaseUrl(raw: string): string {
+  const value = raw.trim().replace(/\/+$/, "");
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(value)) return value;
+  const plaintext = /^(localhost|127\.0\.0\.1|\[::1\]|[^/]+\.railway\.internal)(:\d+)?$/i;
+  return `${plaintext.test(value) ? "http" : "https"}://${value}`;
+}
+
+export const API_BASE_URL = normalizeBaseUrl(
   process.env.API_BASE_URL ??
-  process.env.NEXT_PUBLIC_API_BASE_URL ??
-  "http://127.0.0.1:8000"
-).replace(/\/+$/, "");
+    process.env.NEXT_PUBLIC_API_BASE_URL ??
+    "http://127.0.0.1:8000",
+);
 
 /** Public, browser-facing base URL. Display only — see the note above. */
-export const PUBLIC_API_BASE_URL = (
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? API_BASE_URL
-).replace(/\/+$/, "");
+export const PUBLIC_API_BASE_URL = normalizeBaseUrl(
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? API_BASE_URL,
+);
 
 /**
  * How long a page may serve a cached copy before revalidating.
