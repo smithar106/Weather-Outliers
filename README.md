@@ -9,16 +9,18 @@ Phoenix is unremarkable and a 12 °C day in Iqaluit in January is not, and a
 ranking that cannot tell those apart is a ranking of climate, not of news.
 
 **Live site:** <https://weather-outliers-production.up.railway.app> — on Railway,
-publishing real ERA5 data on a schedule (two cron workers: the daily analysis at
-09:30 UTC, the reanalysis finalisation at 11:00 UTC). See
+publishing real ERA5 data on a schedule, with nothing left to run by hand. Three
+cron workers: the daily analysis at 09:30 UTC, the reanalysis finalisation at
+11:00 UTC, and the climatology build at 13:00 and 16:00 UTC. See
 [docs/deployment.md](docs/deployment.md) to reproduce it.
 
 One honest caveat about what that site currently shows: a 30-year baseline costs
 about 391 weighted Open-Meteo calls per city against a free-tier allowance of
-10,000 a day, so the climatology is still being filled in a few cities at a time.
-Cities without a baseline are **excluded** from ranking rather than scored against
-nothing, which means the board is drawn from the cities built so far. That is a
-smaller board, never a wrong one — see the quota section below.
+10,000 a day, so the climatology is still being filled in a few cities at a time —
+which is what the third worker is for. Cities without a baseline are **excluded**
+from ranking rather than scored against nothing, which means the board is drawn
+from the cities built so far. That is a smaller board, never a wrong one — see the
+quota section below.
 
 ---
 

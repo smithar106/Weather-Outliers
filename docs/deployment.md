@@ -14,7 +14,7 @@ checklist at the bottom and seen it pass.
 
 ## Topology
 
-Four services in one Railway project:
+Five services in one Railway project:
 
 ```
                          ┌────────────────────────────┐
@@ -34,8 +34,8 @@ Four services in one Railway project:
                          └─────────────▲──────────────┘
                                        │ private network
                          ┌─────────────┴──────────────┐
-                         │ Worker (cron only)         │
-                         │  python -m app.pipeline    │
+                         │ Workers (cron only) ×3     │
+                         │  run · finalize · baselines│
                          └────────────────────────────┘
 ```
 
@@ -50,8 +50,8 @@ Why this shape:
   public as well, because a documented read-only API is part of the point of the
   project — but it is public *by choice*, and it can be made private by removing
   its domain without changing any code.
-* **The database has no public endpoint.** Only the three services reach it, over
-  Railway's private network.
+* **The database has no public endpoint.** Only the API and the three workers
+  reach it, over Railway's private network. The frontend never touches it.
 
 ---
 
@@ -221,8 +221,8 @@ image builds without a reachable backend. That is checked in CI.
 **[AUTHORIZATION REQUIRED]** Create a third service from the same repo. It builds
 the root `Dockerfile` — the same image as the API — and differs only in command.
 
-Railway cron services run the start command on a schedule and exit. Two
-schedules are needed, which means two services (Railway allows one cron
+Railway cron services run the start command on a schedule and exit. Three
+schedules are needed, which means three services (Railway allows one cron
 expression per service):
 
 ### 4a. `worker-daily`
@@ -235,7 +235,7 @@ expression per service):
 | Cron schedule | `30 9 * * *` (09:30 UTC) |
 | Health check | none — this service is not a server |
 
-Set **Restart policy → Never** on both workers. A cron run that fails should wait
+Set **Restart policy → Never** on all three workers. A cron run that fails should wait
 for tomorrow rather than immediately retry against the same exhausted provider
 quota, and a failed run cannot corrupt the site: it never reaches the publish step,
 so the last successful board stays up. The root `railway.json` deliberately carries
@@ -262,7 +262,28 @@ and replaces the provisional board. Without this service the site is still
 correct — provisional events are labelled as provisional — but it never upgrades
 them.
 
-Variables for **both** worker services:
+### 4c. `worker-baselines`
+
+| Setting | Value |
+| --- | --- |
+| Start command | `python -m app.pipeline build-baselines` |
+| Cron schedule | `0 13,16 * * *` (13:00 and 16:00 UTC) |
+
+This service exists only to finish the cold start described in §5 without a human
+rerunning it by hand. `build-baselines` is resumable and idempotent: it skips
+cities that already have a baseline, so once all 50 are cached every firing is a
+no-op costing one database query and no provider calls. Leaving it scheduled is
+cheaper than remembering to delete it, and it also picks up any city added to
+`data/cities.json` later.
+
+Two firings a day is the deliberate number. One invocation builds roughly ten
+cities before the hourly provider window closes and it exits 0 on
+`ProviderBudgetExhausted`; two therefore cost about 8,400 weighted calls, which
+stays under the 10,000/day free-tier allowance with room for the daily pipeline's
+~50. Both times sit clear of the 09:30 and 11:00 workers so the windows do not
+overlap.
+
+Variables for `worker-daily` and `worker-finalize`:
 
 ```
 ENVIRONMENT=production
@@ -276,6 +297,11 @@ AGENT_MONTHLY_MAX_LLM_CALLS=2000
 AGENT_INVESTIGATE_TOP_N=10
 LOG_LEVEL=INFO
 ```
+
+`worker-baselines` gets **four** variables and no others — `ENVIRONMENT`,
+`DATABASE_URL`, `WEATHER_PROVIDER`, `LOG_LEVEL`. A baseline build fetches history
+and writes climatology; it never ranks anything and never invokes the agent, so
+giving it an LLM key would widen the blast radius of that key for no capability.
 
 This is the only place in the deployment where an LLM key exists. Explanations
 are generated here, once, during the run, and stored. A page view never triggers
@@ -369,6 +395,10 @@ excluded from rankings rather than scored against nothing. The board simply grow
 as the cache fills. With a commercial `OPEN_METEO_API_KEY` the whole build is a
 single uninterrupted run.
 
+The rerunning is what `worker-baselines` (§4c) is for. Run the command once here
+to confirm it works, then let the cron finish the remaining cities; the site is
+live and correct throughout, on a board drawn from whatever is cached so far.
+
 The **daily** pipeline is a different order of magnitude: about 50 weighted calls,
 0.5% of the free daily allowance. The quota is a setup cost, not an operating one.
 
@@ -376,7 +406,7 @@ The **daily** pipeline is a different order of magnitude: about 50 weighted call
 
 ## 6. Automatic deployments
 
-**[AUTHORIZATION REQUIRED]** For each of the four services, connect it to the
+**[AUTHORIZATION REQUIRED]** For each of the five services, connect it to the
 GitHub repository and set the deploy branch to `main`.
 
 Worth setting per service, if the plan allows it:
@@ -413,7 +443,9 @@ deployment is *which service gets what* — the least-privilege split is the poi
 | `LOG_LEVEL` | – | optional | optional |
 
 A `–` means the service ignores it. A ❌ means setting it there would be a
-mistake, not merely unnecessary.
+mistake, not merely unnecessary. "Workers" here means the two ranking workers;
+`worker-baselines` takes only the four variables listed in §4c, because a
+climatology build reads no model and scores nothing.
 
 ---
 
@@ -482,7 +514,7 @@ observation and not by assumption:
 - [ ] Website service root directory is `frontend`; the other services are at `/`
 - [ ] Every build log shows a Docker build, not Railpack
 - [ ] PostgreSQL provisioned; public TCP proxy **off**
-- [ ] `DATABASE_URL` on all three app services uses `postgresql+psycopg://` and the private domain
+- [ ] `DATABASE_URL` on the API and all three workers uses `postgresql+psycopg://` and the private domain
 - [ ] `alembic upgrade head` applied
 - [ ] `seed-cities` reports 50 cities
 - [ ] `build-baselines` has covered at least 10 cities (full coverage may take days on the free tier)
@@ -494,6 +526,7 @@ observation and not by assumption:
 - [ ] No API key appears in any client bundle (`curl` the page source and grep)
 - [ ] `worker-daily` has executed on schedule at least once, in the logs
 - [ ] `worker-finalize` has executed on schedule at least once
+- [ ] `worker-baselines` has executed on schedule at least once, and holds **no** LLM key
 - [ ] A deliberately failed run leaves the previous board published
 - [ ] Attribution to Open-Meteo and OpenStreetMap is visible in the footer
 - [ ] `/methodology` shows the methodology version and reference period
