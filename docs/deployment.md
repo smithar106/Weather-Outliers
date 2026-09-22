@@ -285,15 +285,32 @@ a model call, so traffic does not affect the AI bill.
 
 ## 5. First-run commands
 
-**[AUTHORIZATION REQUIRED]** Run these once, after the services deploy, from
-`railway run` against the backend service (or a one-off shell):
+**[AUTHORIZATION REQUIRED]** Run these once, after the backend service is deployed
+and running. `railway ssh` executes them **inside the container**, which is what
+makes them work at all — substitute your own backend service name:
 
 ```bash
-railway run --service backend alembic upgrade head
-railway run --service backend python -m app.pipeline seed-cities
-railway run --service backend python -m app.pipeline build-baselines
-railway run --service backend python -m app.pipeline run
-railway run --service backend python -m app.pipeline status
+railway link                       # once, to select the project + environment
+railway ssh --service weather-outliers-api alembic upgrade head
+railway ssh --service weather-outliers-api python -m app.pipeline seed-cities
+railway ssh --service weather-outliers-api python -m app.pipeline build-baselines
+railway ssh --service weather-outliers-api python -m app.pipeline run
+railway ssh --service weather-outliers-api python -m app.pipeline status
+```
+
+Not `railway run`: that runs the command on **your machine** with the service's
+variables injected, and `DATABASE_URL` points at `${{Postgres.RAILWAY_PRIVATE_DOMAIN}}`
+— a hostname that exists only inside Railway's network. It would need the backend's
+dependencies installed locally too. `railway ssh` needs neither.
+
+If you would rather run them locally against the deployed database — to watch the
+baseline build in your own terminal, say — use the Postgres service's **public** TCP
+proxy instead, and expect it to be slower and to be billed as egress:
+
+```bash
+cd backend
+DATABASE_URL="postgresql+psycopg://…@<proxy-host>:<proxy-port>/railway" \
+  .venv/bin/python -m app.pipeline build-baselines
 ```
 
 Migrations are **not** run automatically on boot. An automatic migration on
