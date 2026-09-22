@@ -100,10 +100,24 @@ the private network and off the metered egress path.
 | Setting | Value |
 | --- | --- |
 | Root directory | `/` (the Dockerfile copies `data/` and `evals/`, so the build context must be the repo root) |
+| **Builder** | **`Dockerfile`** — see the warning below |
 | Dockerfile path | `backend/Dockerfile` |
 | Start command | *(leave empty — the image's `CMD` reads `$PORT`)* |
 | Health check path | `/health` |
 | Public domain | generate one, or attach a custom domain |
+
+> **Set the builder explicitly, or the first deploy fails.** Railway defaults to
+> Railpack, which inspects the repository root, finds no single recognisable app
+> there (this is a monorepo: `backend/` is Python, `frontend/` is Node) and stops
+> with *"Railpack could not determine how to build the app."* That error means the
+> builder was never switched, not that anything is wrong with the code.
+>
+> `backend/railway.json` in this repo sets the builder, Dockerfile path, health
+> check and restart policy — but Railway only reads a config file at the repository
+> root unless told otherwise, so it is ignored by default. Either point
+> **Settings → Config as code** at `backend/railway.json`, or set Builder and
+> Dockerfile Path by hand in **Settings → Build**. Both work; the config file keeps
+> the settings in version control.
 
 Variables:
 
@@ -133,10 +147,13 @@ so the only thing it governs is direct browser access to the public API.
 | Setting | Value |
 | --- | --- |
 | Root directory | `/` |
+| **Builder** | **`Dockerfile`** — same Railpack caveat as the backend |
 | Dockerfile path | `frontend/Dockerfile` |
 | Start command | *(empty — image `CMD` reads `$PORT`)* |
 | Health check path | `/` |
 | Public domain | required; this is the website |
+
+Config as code: `frontend/railway.json`.
 
 Variables:
 
@@ -171,10 +188,16 @@ expression per service):
 
 | Setting | Value |
 | --- | --- |
+| Root directory | `/` |
+| **Builder** | **`Dockerfile`** |
 | Dockerfile path | `backend/Dockerfile` |
 | Start command | `python -m app.pipeline run` |
 | Cron schedule | `30 9 * * *` (09:30 UTC) |
 | Health check | none — this service is not a server |
+
+Config as code: `backend/worker.railway.json` (it sets the start command for the
+daily run and `restartPolicyType: NEVER`; override the start command in the UI for
+`worker-finalize`).
 
 Why 09:30 UTC: the pipeline analyses the most recent local calendar day that has
 finished in *every* city in the registry. The registry's westernmost zone is
@@ -343,6 +366,7 @@ railway run --service backend python -m app.pipeline status
 
 | Symptom | Cause | Action |
 | --- | --- | --- |
+| Build fails with `Railpack could not determine how to build the app`, listing the repo's top-level directories | The service is still on Railway's default builder. This is a monorepo, so there is nothing at the root for Railpack to recognise. | Set Builder to `Dockerfile` and the Dockerfile path (`backend/Dockerfile` or `frontend/Dockerfile`), or point Config as code at the matching `railway.json`. |
 | `ProviderBudgetExhausted` in a baseline build | Free-tier window spent | Expected. Rerun later; it resumes. |
 | 429s with `Hourly API request limit exceeded` | The provider's real counter is ahead of ours (e.g. two runs in one hour) | Wait for the hour to roll over. Lower `PROVIDER_MAX_CALL_WEIGHT_PER_HOUR` if it recurs. |
 | Board has fewer than 10 events | Fewer than 10 cities have baselines | Continue `build-baselines`. This is correct behaviour, not a bug. |
