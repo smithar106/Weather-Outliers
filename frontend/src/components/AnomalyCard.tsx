@@ -136,16 +136,16 @@ export function AnomalyCard({ ranked }: { ranked: RankedEvent }) {
               <p className="mt-2.5 text-sm leading-relaxed text-paper-dim">
                 {explanation.statistical_explanation}
               </p>
-              {explanation.historical_context && (
-                <p className="mt-2.5 text-sm leading-relaxed text-paper-muted">
-                  {explanation.historical_context}
-                </p>
-              )}
-              {explanation.caveats && (
-                <p className="mt-3 text-xs leading-relaxed text-paper-faint">
-                  {explanation.caveats}
-                </p>
-              )}
+              {/*
+               * Only the headline and the statistical paragraph. `historical_context`
+               * restates the same margin the paragraph above already quotes, and ten
+               * cards of four paragraphs each is a wall of text nobody reads — both
+               * it and `caveats` are still rendered in full behind "Full breakdown",
+               * and nothing is dropped from the API. The provenance those caveats
+               * carry stays on this card in the footer (observation type, source
+               * dataset) and in the data-tier badge, so no figure here reads as a
+               * station observation.
+               */}
               <ExplanationAttribution explanation={explanation} />
             </div>
           )}
