@@ -90,6 +90,17 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_base_url: str = "https://api.openai.com/v1"
     openai_model: str = ""
+    #: Which field carries the output cap on this endpoint. OpenAI renamed
+    #: ``max_tokens`` to ``max_completion_tokens`` and its reasoning models reject
+    #: the old name outright; DeepSeek and most other OpenAI-compatible gateways
+    #: still take ``max_tokens`` only. There is no field that works everywhere,
+    #: and sending both is not an option because the strict endpoints reject the
+    #: name they do not know. Getting this wrong on a lenient endpoint is worse
+    #: than a crash: the parameter is ignored, the output cap silently stops
+    #: applying, and the cost control it exists to provide is gone.
+    openai_max_tokens_param: Literal["max_completion_tokens", "max_tokens"] = (
+        "max_completion_tokens"
+    )
 
     agent_max_tool_calls: int = 6
     agent_max_iterations: int = 5

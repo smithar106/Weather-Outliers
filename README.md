@@ -8,9 +8,17 @@ Not the hottest place. Not the wettest. The most *surprising*: a 12 °C day in
 Phoenix is unremarkable and a 12 °C day in Iqaluit in January is not, and a
 ranking that cannot tell those apart is a ranking of climate, not of news.
 
-**Live site:** not yet deployed. See [docs/deployment.md](docs/deployment.md) —
-the Railway project requires account authorization that this repository does not
-have. Nothing in this README claims a running production deployment.
+**Live site:** <https://weather-outliers-production.up.railway.app> — on Railway,
+publishing real ERA5 data on a schedule (two cron workers: the daily analysis at
+09:30 UTC, the reanalysis finalisation at 11:00 UTC). See
+[docs/deployment.md](docs/deployment.md) to reproduce it.
+
+One honest caveat about what that site currently shows: a 30-year baseline costs
+about 391 weighted Open-Meteo calls per city against a free-tier allowance of
+10,000 a day, so the climatology is still being filled in a few cities at a time.
+Cities without a baseline are **excluded** from ranking rather than scored against
+nothing, which means the board is drawn from the cities built so far. That is a
+smaller board, never a wrong one — see the quota section below.
 
 ---
 
@@ -202,7 +210,7 @@ Everything below is a measured figure from this repository, not an estimate.
 
 ```
 ruff check backend evals          All checks passed
-pytest                            251 passed
+pytest                            255 passed
 tsc --noEmit                      clean
 eslint .                          clean
 python -m evals.runner            4/4 suites, 62/62 checks, PASSED

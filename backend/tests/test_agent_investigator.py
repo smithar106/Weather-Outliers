@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, date, datetime
 
+import httpx
 import pytest
 
 from app.agent.investigator import (
@@ -28,7 +29,13 @@ from app.agent.investigator import (
     investigate_events,
     month_to_date_budget,
 )
-from app.agent.llm import LLMBadRequest, LLMResponse, LLMUnavailable, ToolCall
+from app.agent.llm import (
+    LLMBadRequest,
+    LLMResponse,
+    LLMUnavailable,
+    OpenAIClient,
+    ToolCall,
+)
 from app.config import get_settings
 from app.domain import Generator, Metric
 from tests.conftest import make_city, make_event, make_run
@@ -736,3 +743,64 @@ def test_temperature_metrics_are_not_the_only_supported_path(session):
     assert "record" not in outcome.explanation.all_text().lower().replace(
         "not an official record", ""
     )
+
+
+# ---------------------------------------------------------------------------
+# OpenAI-compatible transport
+# ---------------------------------------------------------------------------
+
+
+def _openai_client(**overrides):
+    """An OpenAIClient whose transport captures the request body it would send."""
+    settings = get_settings().model_copy(
+        update={
+            "llm_provider": "openai",
+            "openai_api_key": "test-key",
+            "openai_model": "test-model",
+            **overrides,
+        }
+    )
+    sent: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.update(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "model": "test-model",
+                "choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 11, "completion_tokens": 3},
+            },
+        )
+
+    client = OpenAIClient(settings)
+    client._client = httpx.Client(transport=httpx.MockTransport(handler))
+    return client, sent
+
+
+@pytest.mark.parametrize(
+    "field", ["max_completion_tokens", "max_tokens"]
+)
+def test_openai_output_cap_uses_the_configured_field_name(field):
+    """The output cap must arrive under the name the endpoint actually reads.
+
+    OpenAI's reasoning models reject ``max_tokens``; DeepSeek and most other
+    OpenAI-compatible gateways only accept it. A lenient endpoint that ignores
+    the wrong name is the dangerous case — no error, and the spend ceiling
+    quietly stops applying — so the field is configuration, and this pins it.
+    """
+    client, sent = _openai_client(openai_max_tokens_param=field)
+    client.complete(system="s", turns=[], tools=[], max_tokens=1200)
+
+    assert sent[field] == 1200
+    other = "max_tokens" if field == "max_completion_tokens" else "max_completion_tokens"
+    assert other not in sent, "sending both names is rejected by the strict endpoints"
+
+
+def test_openai_base_url_may_point_at_a_compatible_gateway():
+    """A third-party endpoint needs no code change — only a base URL and a model."""
+    client, _ = _openai_client(
+        openai_base_url="https://api.deepseek.com/v1", openai_model="deepseek-flash"
+    )
+    assert client._url == "https://api.deepseek.com/v1/chat/completions"
+    assert client.model == "deepseek-flash"

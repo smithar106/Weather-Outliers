@@ -32,8 +32,10 @@ from app.models import (
     WeatherObservation,
 )
 from app.pipeline.runner import (
+    CityOutcome,
     Pipeline,
     PipelineError,
+    RunReport,
     backfill,
     finalize,
     resolve_analysis_date,
@@ -523,6 +525,41 @@ def test_building_baselines_is_skipped_on_the_second_pass(session, test_settings
     assert second.cities_with_data == 0  # nothing rebuilt
     assert provider.request_count == requests_after_first  # nothing refetched
     assert session.scalar(select(func.count()).select_from(BaselineStatistic)) == rows
+
+
+def test_a_baseline_summary_never_reports_a_failed_city_as_cached():
+    """A city that failed is not a city that was already built.
+
+    The summary once derived "already cached" by subtracting built from total,
+    so a run where two cities died on a 429 printed "8 built, 2 already cached".
+    An operator reading that stops rerunning the build and the two cities stay
+    missing from the board forever.
+    """
+    report = RunReport(
+        run_id="baselines-test",
+        kind=RunKind.BASELINES.value,
+        analysis_date=None,
+        status=RunStatus.SUCCEEDED.value,
+        published=False,
+        duration_ms=1000,
+        cities_total=4,
+        cities_with_data=1,
+        provider_errors=1,
+        city_outcomes=[
+            CityOutcome(city_id="ca-calgary-ab", fetched=True, baselines_found=1825),
+            CityOutcome(city_id="us-denver-co", fetched=False),  # already cached
+            CityOutcome(city_id="us-phoenix-az", error="ProviderError: 429"),
+        ],
+    )
+
+    summary = report.summary()
+
+    assert "1 built" in summary
+    assert "1 already cached" in summary
+    assert "1 failed" in summary
+    assert "1 not attempted" in summary
+    assert "us-phoenix-az: ProviderError: 429" in summary
+    assert "rerun" in summary
 
 
 def test_baselines_record_their_reference_period_and_are_not_called_normals(

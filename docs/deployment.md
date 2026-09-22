@@ -281,6 +281,39 @@ This is the only place in the deployment where an LLM key exists. Explanations
 are generated here, once, during the run, and stored. A page view never triggers
 a model call, so traffic does not affect the AI bill.
 
+**Using DeepSeek (or another OpenAI-compatible endpoint).** The `openai` provider
+is a plain Chat Completions client, so a third-party gateway needs no code — four
+variables on **both worker services** and nothing anywhere else:
+
+```
+LLM_PROVIDER=openai
+OPENAI_API_KEY=<your key>
+OPENAI_BASE_URL=https://api.deepseek.com/v1
+OPENAI_MODEL=deepseek-flash             # confirm the current name on their dashboard
+OPENAI_MAX_TOKENS_PARAM=max_tokens      # DeepSeek's field name; see below
+```
+
+Two things to get right:
+
+* **`OPENAI_MAX_TOKENS_PARAM`.** OpenAI renamed the output cap to
+  `max_completion_tokens` and its reasoning models reject the old name; DeepSeek
+  accepts `max_tokens` only. That is the default's one wrong case, and the failure
+  is silent — a lenient endpoint ignores the field it does not know, the 1,200-token
+  cap stops applying, and nothing errors. Set it to `max_tokens` for DeepSeek.
+* **The model must support tool calling.** The investigator hands the model five
+  tools and a `submit_explanation` schema; a model without function calling cannot
+  answer in the required shape, and every event falls back to the deterministic
+  template. Reasoning-only models are the usual offenders.
+
+`AGENT_USD_PER_MTOK_INPUT` / `_OUTPUT` stay 0.00 until you copy the current
+figures off your provider's pricing page — until then `AGENT_MONTHLY_MAX_LLM_CALLS`
+is the ceiling that actually binds, which is why it exists. At ≤10 investigations a
+day the call count is bounded at roughly 300–600/month before the cap is near.
+
+To confirm the key is actually being used rather than silently falling back, run
+`python -m app.pipeline run` on the worker and read the report: `model-written`
+explanations mean the model answered, `deterministic` means it did not.
+
 ---
 
 ## 5. First-run commands
@@ -373,6 +406,7 @@ deployment is *which service gets what* — the least-privilege split is the poi
 | `PROVIDER_MAX_CALL_WEIGHT_PER_*` | – | – | optional |
 | `LLM_PROVIDER` | – | – | ✅ |
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | ❌ never | ❌ never | optional |
+| `OPENAI_BASE_URL` / `OPENAI_MODEL` / `OPENAI_MAX_TOKENS_PARAM` | – | – | with `openai` |
 | `AGENT_MONTHLY_USD_BUDGET` | – | – | ✅ |
 | `AGENT_MONTHLY_MAX_LLM_CALLS` | – | – | ✅ |
 | `BASELINE_*`, `RANKING_*` | – | ✅ read by the API for `/api/methodology` | ✅ |

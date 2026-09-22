@@ -133,14 +133,38 @@ class RunReport:
             return f"{head}\n  error: {self.error}"
         if self.kind == RunKind.BASELINES.value:
             rows = sum(o.baselines_found for o in self.city_outcomes)
-            return (
-                f"{head}\n"
-                f"  cities:       {self.cities_with_data} built, "
-                f"{self.cities_total - self.cities_with_data} already cached\n"
-                f"  baselines:    {rows} rows written\n"
+            # Every city that is not "built" has one of three quite different
+            # reasons, and they must not be collapsed. Subtracting built from
+            # total and calling the remainder "already cached" reported "8 built,
+            # 2 already cached" for a run where two cities had in fact failed on
+            # a 429 and nothing was cached — an operator reading that would think
+            # the build was complete and stop rerunning it.
+            failed = [o for o in self.city_outcomes if o.error]
+            cached = [o for o in self.city_outcomes if not o.error and not o.fetched]
+            unattempted = self.cities_total - len(self.city_outcomes)
+            parts = [f"{self.cities_with_data} built"]
+            if cached:
+                parts.append(f"{len(cached)} already cached")
+            if failed:
+                parts.append(f"{len(failed)} failed")
+            if unattempted:
+                parts.append(f"{unattempted} not attempted")
+            lines = [
+                head,
+                f"  cities:       {', '.join(parts)} (of {self.cities_total})",
+                f"  baselines:    {rows} rows written",
                 f"  provider:     {self.provider_requests} requests, "
-                f"{self.provider_errors} errors"
-            )
+                f"{self.provider_errors} errors",
+            ]
+            if failed or unattempted:
+                lines.append(
+                    "  incomplete:   rerun `pipeline build-baselines` to resume; "
+                    "cities without a baseline are excluded from ranking, not scored "
+                    "against nothing"
+                )
+                for outcome in failed:
+                    lines.append(f"    - {outcome.city_id}: {outcome.error}")
+            return "\n".join(lines)
         return (
             f"{head}\n"
             f"  cities:       {self.cities_with_data}/{self.cities_total} "

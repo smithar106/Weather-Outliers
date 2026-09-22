@@ -223,7 +223,13 @@ class AnthropicClient:
 
 
 class OpenAIClient:
-    """Adapter for the OpenAI Chat Completions API (and compatible gateways)."""
+    """Adapter for the OpenAI Chat Completions API (and compatible gateways).
+
+    Nothing here is OpenAI-specific beyond the wire format, so DeepSeek or any
+    other compatible endpoint needs a base URL, a model name and a key — no code.
+    The one incompatibility is the name of the output-cap field, which is
+    configuration; see :attr:`~app.config.Settings.openai_max_tokens_param`.
+    """
 
     provider = "openai"
 
@@ -238,6 +244,7 @@ class OpenAIClient:
             )
         self.model = settings.openai_model
         self._url = settings.openai_base_url.rstrip("/") + "/chat/completions"
+        self._max_tokens_field = settings.openai_max_tokens_param
         self._client = httpx.Client(
             timeout=settings.agent_timeout_seconds,
             headers={
@@ -255,7 +262,8 @@ class OpenAIClient:
 
         payload = {
             "model": self.model,
-            "max_completion_tokens": max_tokens,
+            # Field name is configurable: see Settings.openai_max_tokens_param.
+            self._max_tokens_field: max_tokens,
             "messages": messages,
             "tools": [
                 {
