@@ -153,8 +153,16 @@ ENVIRONMENT=production
 DATABASE_URL=postgresql+psycopg://...        # as above
 WEATHER_PROVIDER=open_meteo
 CORS_ALLOW_ORIGINS=https://<your-frontend-domain>
+PORT=8000
 LOG_LEVEL=INFO
 ```
+
+**Set `PORT` explicitly here even though the image defaults to it.** The website
+reaches this service over private networking at a fixed port, and private
+networking does no port mapping — whatever the process listens on is the port you
+must dial. Leaving `PORT` to be injected means the address in the website's
+`API_BASE_URL` is a guess about what was injected. Pinning it makes `:8000`
+true by construction.
 
 The API service deliberately gets **no** `ANTHROPIC_API_KEY`, no
 `OPENAI_API_KEY`, and no `OPEN_METEO_API_KEY`. It never calls either service: it
@@ -184,10 +192,17 @@ Build config in version control: `frontend/railway.json`, which Railway reads be
 Variables:
 
 ```
-API_BASE_URL=http://backend.railway.internal:8000
+API_BASE_URL=http://${{<backend-service-name>.RAILWAY_PRIVATE_DOMAIN}}:8000
 ```
 
-Two things about that value:
+Use the reference form rather than typing the host. A service's private domain is
+derived from **its service name**, so `backend.railway.internal` is only correct if
+the backend service is literally named `backend`; name it `weather-outliers-api` and
+the hostname changes with it. The reference is resolved by Railway, so it cannot be
+stale or misspelled — and it is why `PORT=8000` is pinned on the backend, since the
+port half of this address is not a reference and has to be true.
+
+Two more things about that value:
 
 * It is the **private** address. Page rendering therefore does not leave
   Railway's network, does not pay egress, and does not depend on the API's public
@@ -401,7 +416,8 @@ railway run --service backend python -m app.pipeline status
 | 429s with `Hourly API request limit exceeded` | The provider's real counter is ahead of ours (e.g. two runs in one hour) | Wait for the hour to roll over. Lower `PROVIDER_MAX_CALL_WEIGHT_PER_HOUR` if it recurs. |
 | Board has fewer than 10 events | Fewer than 10 cities have baselines | Continue `build-baselines`. This is correct behaviour, not a bug. |
 | Explanations are templated, not narrative | No LLM key, or a budget ceiling reached | Intended fallback. Check `LLM_PROVIDER` and the monthly counters. |
-| API up, frontend shows an error | `API_BASE_URL` wrong, or the private domain misspelled | `curl` the private address from a backend shell. |
+| The custom domain returns `{"name":"Weather Outliers API",...}` | The domain is attached to the **backend** service. That JSON is the API's root route, so the API is healthy — it is just not the website. | Attach the domain to the website service instead (root directory `frontend`). The API does not need a public domain at all. |
+| API up, frontend shows an error | `API_BASE_URL` wrong. Usually the host: the private domain follows the **service name**, so `backend.railway.internal` is wrong unless the service is named `backend`. Otherwise the port, if `PORT` was left unpinned on the backend. | Use `http://${{<service>.RAILWAY_PRIVATE_DOMAIN}}:8000` and set `PORT=8000` on the backend. Confirm with `curl` from a backend shell. |
 | Migration errors on deploy | Schema and code out of step | `alembic upgrade head`; migrations are never automatic. |
 | Everything is labelled `synthetic_fixture_v1` | `WEATHER_PROVIDER=fixture` in production | Set it to `open_meteo` and re-run. |
 
