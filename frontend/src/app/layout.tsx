@@ -53,7 +53,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a1020",
+  /* Matches `--color-ink-950`, the page ground, so a phone's browser chrome
+     blends into the page rather than banding against it. Keep the two in step. */
+  themeColor: "#0d1526",
   colorScheme: "dark",
 };
 

@@ -223,7 +223,7 @@
   filter: invert(1) brightness(1.4);
 }
 .maplibregl-ctrl-attrib {
-  background: rgba(10, 16, 32, 0.82) !important;
+  background: rgba(13, 21, 38, 0.82) !important;
   color: var(--color-paper-dim) !important;
 }
 .maplibregl-ctrl-attrib a {
