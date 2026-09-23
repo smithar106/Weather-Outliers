@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { AnomalyCard } from "@/components/AnomalyCard";
 import { ProvenanceStrip } from "@/components/ProvenanceStrip";
+import { RarityTable } from "@/components/RarityTable";
 import { Badge, Callout, Card, Container, EmptyState, LoadFailure, Section } from "@/components/ui";
 import { ApiError, getLatestRankings } from "@/lib/api";
 import {
@@ -79,13 +80,30 @@ export default async function HomePage() {
               </EmptyState>
             </div>
           ) : (
-            <ol className="mt-6 space-y-5">
-              {rankings.events.map((ranked) => (
-                <li key={ranked.event.id}>
-                  <AnomalyCard ranked={ranked} />
-                </li>
-              ))}
-            </ol>
+            /*
+             * The rarity table is a sibling of the cards rather than a column inside
+             * each one, because it is a different reading: ten percentages together
+             * are comparable at a glance, and the same ten spread across ten cards
+             * are not. On narrow screens it stacks above the cards, which is the
+             * right order — an index, then the detail.
+             *
+             * `lg:items-start` keeps `sticky` working: a stretched grid item is as
+             * tall as the row, and a sticky box that fills its container has nothing
+             * to slide against.
+             */
+            <div className="mt-6 grid gap-6 lg:grid-cols-[16.5rem_minmax(0,1fr)] lg:items-start">
+              <div className="lg:sticky lg:top-6">
+                <RarityTable events={rankings.events} />
+              </div>
+
+              <ol className="space-y-5">
+                {rankings.events.map((ranked) => (
+                  <li key={ranked.event.id}>
+                    <AnomalyCard ranked={ranked} />
+                  </li>
+                ))}
+              </ol>
+            </div>
           )}
         </Section>
 

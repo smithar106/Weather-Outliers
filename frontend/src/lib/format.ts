@@ -16,6 +16,7 @@ import type {
   CategoryId,
   DataQuality,
   DataTier,
+  Direction,
   EventCalculation,
   MetricId,
   ObservationType,
@@ -135,6 +136,68 @@ export function describeRarity(calculation: EventCalculation): string {
   }
   const odds = formatOddsPhrase(calculation.tail_probability);
   return odds ? `${probability} of comparable days — ${odds}.` : `${probability} of comparable days.`;
+}
+
+/**
+ * How much of the reference sample this event was more extreme than, as a
+ * percentage: "more unusual than 99.3% of comparable days".
+ *
+ * Derived from the percentile rather than from `tail_probability`, and the choice
+ * matters at the very end of the tail. The two agree everywhere they can —
+ * `percentile` is the empirical CDF `F(x)` in percent, and the backend's
+ * one-sided tail is `1 − F` above and `F` below, so `100 · (1 − tail)` is the
+ * same number — except that the tail probability is *floored* at `1/(n+1)` so it
+ * can never claim more precision than the sample supports. Reading rarity off
+ * that floor would top out at `n/(n+1)`, which is 99.8% for a 450-day window, and
+ * would report a value that beat every single sampled day as though one day had
+ * beaten it. The percentile has no floor, so it says 100% — which is the exact,
+ * checkable claim: every one of the N sampled days was less extreme.
+ *
+ * That is also why the scope has to travel with the number. 100% here means 100%
+ * of the days in this city's 1991–2020 seasonal window, not 100% of all days ever
+ * recorded. Callers must print the sample size; {@link RarityTable} does it in the
+ * column footnote and in each row's tooltip.
+ */
+export function rarityPercent(
+  calculation: EventCalculation,
+  direction: Direction
+): number | null {
+  const percentile = calculation.percentile;
+  if (percentile === null || percentile === undefined || !Number.isFinite(percentile)) {
+    return null;
+  }
+  const rarity = direction === "below" ? 100 - percentile : percentile;
+  return Math.min(100, Math.max(0, rarity));
+}
+
+/**
+ * {@link rarityPercent} as a string, with one guard: 100% is reserved for events
+ * that actually cleared the whole sample.
+ *
+ * The empirical CDF returns `F = 1.0` for a value that merely *ties* the sample
+ * maximum, because `F` counts days at or below `x`. "More unusual than 100% of
+ * comparable days" would then be printed for a day that one historical day
+ * matched. So unless `beyond_baseline_sample` says the value strictly cleared
+ * every sampled day, the display is capped at the most a tie can truthfully
+ * claim: `n − 1` of `n` days were strictly less extreme, i.e. `100 · (1 − 1/n)`.
+ * For a 450-day window that is 99.8%, and the cap is derived from the sample
+ * rather than picked to look plausible. It is a display cap only; the figure
+ * behind it is untouched.
+ *
+ * One decimal place, matching {@link formatPercentile}. A 450-day window resolves
+ * steps of 100/450 ≈ 0.22 points, so a second decimal would be invented
+ * precision.
+ */
+export function formatRarityPercent(
+  calculation: EventCalculation,
+  direction: Direction,
+  sampleSize: number
+): string {
+  const rarity = rarityPercent(calculation, direction);
+  if (rarity === null) return NO_VALUE;
+  if (calculation.beyond_baseline_sample) return "100%";
+  const cap = sampleSize > 1 ? 100 * (1 - 1 / sampleSize) : 0;
+  return `${formatNumber(Math.min(rarity, cap), 1)}%`;
 }
 
 /**
