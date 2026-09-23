@@ -286,33 +286,33 @@ export interface CategoryStyle {
 export const CATEGORY_STYLES: Record<CategoryId, CategoryStyle> = {
   heat: {
     label: "Heat",
-    color: "#FF6B4A",
-    badge: "bg-[#FF6B4A]/18 text-[#FF9C85] ring-[#FF6B4A]/45",
-    text: "text-[#FF9C85]",
+    color: "#ea580c",
+    badge: "bg-[#ea580c]/10 text-[#c2410c] ring-[#ea580c]/30",
+    text: "text-[#c2410c]",
   },
   cold: {
     label: "Cold",
-    color: "#56B4F5",
-    badge: "bg-[#56B4F5]/18 text-[#8FCDF9] ring-[#56B4F5]/45",
-    text: "text-[#8FCDF9]",
+    color: "#0284c7",
+    badge: "bg-[#0284c7]/10 text-[#0369a1] ring-[#0284c7]/30",
+    text: "text-[#0369a1]",
   },
   temperature: {
     label: "Temperature",
-    color: "#A78BFA",
-    badge: "bg-[#A78BFA]/18 text-[#C4B2FC] ring-[#A78BFA]/45",
-    text: "text-[#C4B2FC]",
+    color: "#7c3aed",
+    badge: "bg-[#7c3aed]/10 text-[#6d28d9] ring-[#7c3aed]/30",
+    text: "text-[#6d28d9]",
   },
   precipitation: {
     label: "Precipitation",
-    color: "#22C7B8",
-    badge: "bg-[#22C7B8]/18 text-[#6FDDD2] ring-[#22C7B8]/45",
-    text: "text-[#6FDDD2]",
+    color: "#0d9488",
+    badge: "bg-[#0d9488]/10 text-[#0f766e] ring-[#0d9488]/30",
+    text: "text-[#0f766e]",
   },
   wind: {
     label: "Wind",
-    color: "#E8C84A",
-    badge: "bg-[#E8C84A]/18 text-[#F0DA86] ring-[#E8C84A]/45",
-    text: "text-[#F0DA86]",
+    color: "#ca8a04",
+    badge: "bg-[#ca8a04]/10 text-[#a16207] ring-[#ca8a04]/30",
+    text: "text-[#a16207]",
   },
 };
 

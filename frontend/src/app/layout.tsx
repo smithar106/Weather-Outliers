@@ -55,8 +55,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   /* Matches `--color-ink-950`, the page ground, so a phone's browser chrome
      blends into the page rather than banding against it. Keep the two in step. */
-  themeColor: "#0d1526",
-  colorScheme: "dark",
+  themeColor: "#f6f8fa",
+  colorScheme: "light",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

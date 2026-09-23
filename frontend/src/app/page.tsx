@@ -85,7 +85,7 @@ export default async function HomePage() {
             </div>
             <p className="max-w-md text-sm leading-relaxed text-paper-muted">
               {rankings.one_event_per_city
-                ? "One event per city, so a single unusual day cannot occupy the whole board. Every city's other events remain in the dataset and on its detail page."
+                ? "One event per city, so a single unusual day can't occupy the whole board."
                 : "All ranked events, including multiple events from the same city."}
             </p>
           </div>
@@ -134,12 +134,6 @@ export default async function HomePage() {
                 className="rounded-lg border border-ink-700 bg-ink-800 px-4 py-2 text-sm text-paper transition-colors hover:border-accent-dim hover:text-accent-bright"
               >
                 Full methodology
-              </Link>
-              <Link
-                href="/map"
-                className="rounded-lg border border-ink-700 px-4 py-2 text-sm text-paper-dim transition-colors hover:border-accent-dim hover:text-accent-bright"
-              >
-                See it on the map
               </Link>
               <Link
                 href="/ask"
@@ -195,10 +189,8 @@ function Hero({ rankings, hoursSincePublish }: { rankings: Rankings; hoursSinceP
         </h1>
 
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-paper-dim">
-          Every day this site compares {formatNumber(rankings.run.cities_total, 0)} North American
-          cities against their own thirty-year seasonal history and publishes the{" "}
-          {rankings.count} most improbable readings — ranked by how unlikely they were, not by how
-          large they were, so a cold snap in Mérida can outrank a hotter day in Phoenix.
+          {formatNumber(rankings.run.cities_total, 0)} cities measured against their own thirty-year
+          history — ranked by how improbable, not how large, each reading was.
         </p>
       </div>
 

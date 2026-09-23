@@ -1,87 +1,63 @@
 @import "tailwindcss";
 
 /*
- * Design intent: a weather intelligence desk, not a consumer weather app. Deep
- * navy ground, one cool accent, colour reserved almost entirely for encoding the
- * weather category of a ranked event. Numbers are set in a monospace face so
- * columns of figures line up and a reader can compare them by eye — which is the
- * whole point of a site whose claim is that the arithmetic is auditable.
+ * Design intent: a calm intelligence surface, not a dark terminal. A near-white
+ * cool ground, white cards with hairline borders, one sophisticated blue for
+ * interaction, and colour reserved almost entirely for encoding the weather
+ * category of a ranked event. Numbers are set in a monospace face so columns of
+ * figures line up and a reader can compare them by eye — which is the whole point
+ * of a site whose claim is that the arithmetic is auditable.
  */
 
-/*
- * The ramp has been lifted twice. The first pass fixed outright failures; this
- * one answers a different complaint — that the page still read as too dark even
- * though every text colour passed AA. Passing AA and looking bright are not the
- * same thing, and two structural faults were doing the damage rather than the
- * type ramp alone:
- *
- * `ink-850` (the card surface) sat at 1.20:1 against `ink-950` (the page
- * ground). A ratio that low is below the threshold where an edge is perceptible
- * at all, so ten cards on a page read as one undifferentiated dark field and the
- * only thing separating them was a border that was itself under 2:1. And
- * `ink-700`, that border, missed WCAG 1.4.11's 3:1 floor for the boundary of a
- * UI component, which is the rule that actually governs a card edge — AA for
- * text does not cover it.
- *
- * So the grounds came up along with the type, and the border came up further
- * than either. Ratios below are measured against `--color-ink-850`, the card
- * surface, which is the strictest of the three grounds any of these sit on.
- * Every text step now clears 7.6:1 against it, where the old floor was 5.7:1.
- */
 @theme {
-  /* Ground. Lifted as a set so the surface separates from the page (1.31:1, up
-     from 1.20:1) without flattening the type contrast above it. */
-  --color-ink-950: #0d1526;
-  --color-ink-900: #152341;
-  --color-ink-850: #1c2c4a;
-  --color-ink-800: #2a3d63;
-  --color-ink-750: #344a74;
-  /* Borders. `ink-700` is the card edge, now 3.17:1 against the surface and so
-     past WCAG 1.4.11's 3:1 floor for a UI boundary; `ink-600` is the emphasised
-     edge, and doubles as the histogram bar fill in DistributionChart. */
-  --color-ink-700: #5f78ae;
-  --color-ink-600: #7a93c6;
+  /* Ground, light. `ink-950` is the page; `ink-850` is the card. The scale is
+     a set of cool near-white steps so a card separates from the page without a
+     heavy border or shadow. */
+  --color-ink-950: #f6f8fa;
+  --color-ink-900: #eef1f5;
+  --color-ink-850: #ffffff;
+  --color-ink-800: #e9edf3;
+  --color-ink-750: #dce3ec;
+  /* Borders. `ink-700` is the hairline card edge; `ink-600` is the emphasised
+     edge and doubles as the histogram bar fill. */
+  --color-ink-700: #d3dae4;
+  --color-ink-600: #a9b6c8;
 
-  /* Type: 13.7:1 · 11.9:1 · 9.7:1 · 7.7:1 against the card surface — every step
-     now well clear of AA, including `faint`, which carries the 11px eyebrow
-     labels, figure captions and chart axis labels. */
-  --color-paper: #fbfdff;
-  --color-paper-dim: #e6edfb;
-  --color-paper-muted: #cbd8ee;
-  --color-paper-faint: #b2c1dc;
+  /* Type, dark. Near-black primary down to a faint grey for the smallest labels.
+     Every step clears WCAG AA against the white card surface. */
+  --color-paper: #0f1c2e;
+  --color-paper-dim: #34415c;
+  --color-paper-muted: #57657d;
+  --color-paper-faint: #64748b;
 
-  /* One accent, used for interaction and emphasis only. `accent-dim` is a
-     border and underline colour, not a text colour. */
-  --color-accent: #9ad3ff;
-  --color-accent-bright: #d8edff;
-  --color-accent-dim: #6099d6;
+  /* One blue, used for interaction and emphasis only. `accent-dim` is a border
+     and underline colour, not a text colour. */
+  --color-accent: #2563eb;
+  --color-accent-bright: #1e40af;
+  --color-accent-dim: #93c5fd;
 
   /* Weather categories. Kept in sync with CATEGORY_STYLES in lib/format.ts. */
-  --color-heat: #ff6b4a;
-  --color-cold: #56b4f5;
-  --color-temperature: #a78bfa;
-  --color-precipitation: #22c7b8;
-  --color-wind: #e8c84a;
+  --color-heat: #ea580c;
+  --color-cold: #0284c7;
+  --color-temperature: #7c3aed;
+  --color-precipitation: #0d9488;
+  --color-wind: #ca8a04;
 
-  --color-positive: #4ade80;
-  --color-warning: #fbbf24;
-  --color-negative: #fb7185;
+  --color-positive: #15803d;
+  --color-warning: #b45309;
+  --color-negative: #b91c1c;
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-display), Georgia, "Times New Roman", serif;
   --font-mono: var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
 
-  /* Cards, callouts and buttons all sit on the same radius now — a crisper,
-     more editorial corner than the previous mixed radii, and one step further
-     from the rounded-card SaaS look. */
+  /* Cards, callouts and buttons all sit on the same radius. */
   --radius-card: 0.75rem;
 }
 
 @layer base {
   html {
     scroll-behavior: smooth;
-    /* Reserve the scrollbar gutter so navigating between a long and a short page
-       does not shift the layout horizontally. */
     scrollbar-gutter: stable;
   }
 
@@ -101,21 +77,6 @@
     text-wrap: pretty;
   }
 
-  /*
-   * A faint radial wash at the top of the page. Purely atmospheric, and behind
-   * everything, so it can never reduce text contrast.
-   */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background:
-      radial-gradient(90rem 40rem at 50% -14rem, rgba(126, 196, 255, 0.12), transparent 70%),
-      radial-gradient(60rem 30rem at 85% 5%, rgba(167, 139, 250, 0.06), transparent 70%);
-  }
-
   /* Tabular figures everywhere a number appears, so columns align. */
   .tnum {
     font-family: var(--font-mono);
@@ -130,17 +91,16 @@
   }
 
   ::selection {
-    background: rgba(126, 196, 255, 0.3);
+    background: rgba(37, 99, 235, 0.15);
   }
 }
 
 @layer components {
   .surface {
-    /* Nearly opaque. At 92% the card blended far enough toward the page ground to
-       give back much of the surface/ground separation the palette just bought. */
-    background-color: color-mix(in oklab, var(--color-ink-850) 97%, transparent);
+    background-color: var(--color-ink-850);
     border: 1px solid var(--color-ink-700);
     border-radius: var(--radius-card);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   }
 
   /* Small uppercase label above a value or a section. */
@@ -183,62 +143,6 @@
     padding: 0.08em 0.35em;
     color: var(--color-accent-bright);
   }
-}
-
-/*
- * MapLibre ships its own light-themed controls and popup chrome. These overrides
- * restyle them for a dark surface; the attribution control is deliberately left
- * fully legible because the tile and data licences require it to be visible.
- */
-.maplibregl-popup-content {
-  background: var(--color-ink-850);
-  color: var(--color-paper);
-  border: 1px solid var(--color-ink-700);
-  border-radius: 0.75rem;
-  padding: 0;
-  box-shadow: 0 18px 50px -12px rgba(0, 0, 0, 0.7);
-}
-.maplibregl-popup-close-button {
-  color: var(--color-paper-muted);
-  font-size: 1.15rem;
-  padding: 0.25rem 0.5rem;
-}
-.maplibregl-popup-close-button:hover {
-  background: transparent;
-  color: var(--color-paper);
-}
-.maplibregl-popup-anchor-top .maplibregl-popup-tip,
-.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
-.maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
-  border-bottom-color: var(--color-ink-700);
-}
-.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
-.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
-.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
-  border-top-color: var(--color-ink-700);
-}
-.maplibregl-popup-anchor-left .maplibregl-popup-tip {
-  border-right-color: var(--color-ink-700);
-}
-.maplibregl-popup-anchor-right .maplibregl-popup-tip {
-  border-left-color: var(--color-ink-700);
-}
-.maplibregl-ctrl-group {
-  background: var(--color-ink-850);
-  border: 1px solid var(--color-ink-700);
-}
-.maplibregl-ctrl-group button + button {
-  border-top-color: var(--color-ink-700);
-}
-.maplibregl-ctrl-group button .maplibregl-ctrl-icon {
-  filter: invert(1) brightness(1.4);
-}
-.maplibregl-ctrl-attrib {
-  background: rgba(13, 21, 38, 0.82) !important;
-  color: var(--color-paper-dim) !important;
-}
-.maplibregl-ctrl-attrib a {
-  color: var(--color-accent-bright) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

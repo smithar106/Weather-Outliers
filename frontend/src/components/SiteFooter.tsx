@@ -28,7 +28,6 @@ export function SiteFooter() {
             <ul className="mt-3 space-y-2 text-sm">
               {[
                 { href: "/", label: "Today's outliers" },
-                { href: "/map", label: "Map" },
                 { href: "/archive", label: "Archive" },
                 { href: "/ask", label: "Ask the data" },
                 { href: "/methodology", label: "Methodology" },
