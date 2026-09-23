@@ -484,11 +484,17 @@ shared record of anything.
    extractable claims; the coverage floor reports that rather than hiding it.
 9. The optional judge's limitations are listed in its own section. They are not
    small.
-10. The `ops/mlflow` image has not been built — there is no Docker daemon on the
-    machine these notes were written on. The entrypoint's logic, the server's
-    startup, basic auth, the host allowlist and a full client round-trip including
-    artifact upload were all verified by running the same commands against the same
-    pinned MLflow version outside a container.
+10. The `ops/mlflow` service has never run on Railway. The *image* is built and
+    exercised on every push — CI has a Docker daemon and the machine these notes
+    were written on does not — and inside the real container it asserts: the
+    entrypoint exits non-zero with no backend store, exits non-zero with a store but
+    no authentication, serves `/health` in 13 s, runs as uid 10001 rather than root,
+    and answers **401** anonymous, **401** on a wrong password, **200** with correct
+    credentials, **200** for a `*.railway.internal` Host and **403** for an unknown
+    one. What remains unverified is the platform: Railway's private DNS, the mounted
+    volume, and PostgreSQL rather than the SQLite store CI uses. A full client
+    round-trip including artifact upload was verified outside a container, against
+    the same pinned MLflow version.
 
 ---
 

@@ -218,11 +218,13 @@ eslint .                          clean
 python -m evals.runner            8/8 suites, 138/138 checks, PASSED
 ```
 
-CI additionally builds both container images and smoke-tests them: that the backend
-image can import the module it launches, that `app` resolves to the source in the image
-rather than to an installed copy of it, and that the website container answers HTTP on
-`0.0.0.0`. That job exists because a Dockerfile that builds and then cannot import its
-own entrypoint is a deploy that restart-loops, and that happened here once.
+CI additionally builds all three container images and smoke-tests them: that the
+backend image can import the module it launches, that `app` resolves to the source in
+the image rather than to an installed copy of it, that the website container answers
+HTTP on `0.0.0.0`, and that the private MLflow server refuses to start unauthenticated,
+drops root, and enforces both its credentials and its Host allowlist. That job exists
+because a Dockerfile that builds and then cannot import its own entrypoint is a deploy
+that restart-loops, and that happened here once.
 
 The evaluation harness (`python -m evals.runner`, report committed at
 `evals/reports/latest.json` and rendered at `/evaluation`) runs eight suites.
