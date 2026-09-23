@@ -370,7 +370,7 @@ and are not part of the application.
                          │              │
                  ┌───────▼──────┐  ┌────▼──────────────┐
                  │  PostgreSQL  │  │  Volume /data     │
-                 │  db: mlflow  │  │  /data/mlartifacts│
+                 │  `mlflow-db` │  │  /data/mlartifacts│
                  └──────────────┘  └───────────────────┘
                          ▲
         private network  │  http://mlflow.railway.internal:5000
@@ -425,33 +425,69 @@ over HTTP, logged its run and uploaded a 9,844-byte report artifact through the
 proxy artifact store. One suite rather than eight there, because what was under
 test was the transport and the credentials, not the evaluators.
 
-#### Steps that need your authorization
+#### The deployed configuration
 
-These cannot be done from a config file — Railway has no schema for them, and they
-spend money and create infrastructure:
+This is live as of 2026-09-23. The six steps below are what it took, kept here
+because they are the reproduction recipe and because every one of them is a
+decision rather than a default:
 
-1. **Create a database for MLflow** on the existing PostgreSQL service:
-   `CREATE DATABASE mlflow;` then build its URL from the service's credentials, or
-   add a second PostgreSQL service if you would rather keep them fully apart.
-2. **Create the service.** New service from this repository, root directory
-   `ops/mlflow`. It will read `ops/mlflow/railway.json`.
-3. **Attach a volume** mounted at `/data`. Without it, artifacts are lost on every
-   deploy while the run metadata survives — a failure that looks fine until someone
-   clicks an artifact.
-4. **Do not generate a domain.** If you ever want the UI in a browser, set basic
-   auth credentials first, then add the domain and add its hostname to
+1. **A second PostgreSQL service**, reserved for MLflow — not a second database on
+   the application's server. Name it **`mlflow-db`**, not `mlflow`: Railway derives
+   the private hostname from the service name, so a database called `mlflow` claims
+   `mlflow.railway.internal` and the tracking server cannot have it. Wire it in by
+   reference — `MLFLOW_BACKEND_STORE_URI=${{mlflow-db.DATABASE_URL}}` — so the
+   password is never copied anywhere it would have to be rotated twice.
+2. **A service from this repository** with root directory `ops/mlflow`. Railway
+   detects the Dockerfile there and reads `ops/mlflow/railway.json`.
+3. **A volume mounted at `/data`.** Without it, artifacts are lost on every deploy
+   while the run metadata survives — a failure that looks fine until someone clicks
+   an artifact.
+4. **No domain.** The service has none. If you ever want the UI in a browser, set
+   basic auth credentials first, then add the domain and add its hostname to
    `MLFLOW_ALLOWED_HOSTS`.
-5. **Set variables** on the MLflow service:
-   `MLFLOW_BACKEND_STORE_URI`, `MLFLOW_ARTIFACTS_DESTINATION=/data/mlartifacts`,
-   and either `MLFLOW_AUTH_USERNAME` + `MLFLOW_AUTH_PASSWORD` or
-   `MLFLOW_ALLOW_ANONYMOUS=true`.
-6. **Set variables on the cron workers only** — `worker-daily`, `worker-finalize`,
-   `worker-baselines`:
-   `MLFLOW_TRACING_ENABLED=true`,
+5. **Variables on the MLflow service:** `MLFLOW_BACKEND_STORE_URI`,
+   `MLFLOW_ARTIFACTS_DESTINATION=/data/mlartifacts`, `MLFLOW_AUTH_USERNAME`,
+   `MLFLOW_AUTH_PASSWORD` (or `MLFLOW_ALLOW_ANONYMOUS=true` instead of the pair),
+   and `PORT=5000` — Railway injects `PORT` only for services with a domain, and
+   this one has none, so it is set explicitly and the clients' URI must agree.
+6. **Variables on the cron workers only** — `worker-daily`, `worker-finalize`,
+   `worker-baselines`: `MLFLOW_TRACING_ENABLED=true`,
    `MLFLOW_TRACKING_URI=http://mlflow.railway.internal:5000`,
    `MLFLOW_EXPERIMENT=weather-outliers`, plus
-   `MLFLOW_TRACKING_USERNAME`/`MLFLOW_TRACKING_PASSWORD` if auth is on. Leave the
-   website and public API untouched.
+   `MLFLOW_TRACKING_USERNAME`/`MLFLOW_TRACKING_PASSWORD`. The website and the public
+   API were left untouched, so no visitor request can write telemetry or spend money.
+
+**What the live deployment did, measured.** The server came up on its first deploy,
+reported `port=5000 artifacts=/data/mlartifacts auth=basic-auth`, created its own
+schema in `mlflow-db`, and logged `Allowed hosts: *.railway.internal, …`. From
+another service on the private network: `/health` → **200**, an anonymous API call →
+**401**. Then `worker-daily` was fired early to produce the first real trace. The
+run published 10 events for 2026-09-21 across 50/50 cities with 0 provider errors,
+and the store afterwards held **one trace, 16 spans, all `OK`**:
+
+```
+pipeline.run_daily        OK  9377 ms   (root)
+  fetch_observations      OK  8922 ms
+  require_completeness    OK     0 ms
+  score_anomalies         OK    41 ms
+  rank_events             OK     1 ms
+  explain_events          OK    89 ms
+    explain_event × 10    OK   0–1 ms each
+```
+
+Sixteen rather than eleven because `explain_event` is per published event, and
+`llm_completion`/`validate_explanation` are absent because `LLM_PROVIDER=none`
+there — the deterministic templates do not call a model, and the trace says so
+rather than implying one ran. The root span's recorded attributes are dates, counts,
+durations, `methodology_version`, `prompt_version`, `prompt_sha256`,
+`weather_provider`, `llm_provider`, `llm_calls`, `llm_estimated_usd`: no credential,
+no request URL, no personal data. `worker-daily`'s schedule was restored to
+`30 9 * * *` afterwards.
+
+One thing to note about that early firing: Railway's cron scheduler ran the job
+about four minutes after the minute it was set to, and cron changes only take effect
+on the next deploy. Neither matters for a daily job; both matter if you are sitting
+there watching for it.
 
 Local evaluation runs cannot reach a private Railway service — private networking
 is between services only. They write to the local SQLite store by default, which is
@@ -484,17 +520,20 @@ shared record of anything.
    extractable claims; the coverage floor reports that rather than hiding it.
 9. The optional judge's limitations are listed in its own section. They are not
    small.
-10. The `ops/mlflow` service has never run on Railway. The *image* is built and
-    exercised on every push — CI has a Docker daemon and the machine these notes
-    were written on does not — and inside the real container it asserts: the
-    entrypoint exits non-zero with no backend store, exits non-zero with a store but
-    no authentication, serves `/health` in 13 s, runs as uid 10001 rather than root,
-    and answers **401** anonymous, **401** on a wrong password, **200** with correct
-    credentials, **200** for a `*.railway.internal` Host and **403** for an unknown
-    one. What remains unverified is the platform: Railway's private DNS, the mounted
-    volume, and PostgreSQL rather than the SQLite store CI uses. A full client
-    round-trip including artifact upload was verified outside a container, against
-    the same pinned MLflow version.
+10. The `ops/mlflow` service is deployed and has produced exactly **one** real
+    trace, from one `worker-daily` run, described above. What that verifies is the
+    chain: Railway's private DNS, basic auth, the PostgreSQL backend store, and the
+    span tree the workers emit. What it does not verify is anything cumulative —
+    artifact retention across a redeploy, how the store behaves at a year of daily
+    traces, or the two workers that have not yet run under tracing
+    (`worker-finalize`, and `worker-baselines` with its `build_city_baseline` spans).
+    No `llm_completion` or `validate_explanation` span has ever been recorded on
+    Railway, because no LLM provider is configured there. The image's refusal and
+    authorization behaviour is separately asserted in CI on every push — entrypoint
+    exits non-zero with no backend store, exits non-zero with a store but no
+    authentication, serves `/health` in 13 s, runs as uid 10001 rather than root, and
+    answers **401** anonymous, **401** on a wrong password, **200** with correct
+    credentials, **200** for a `*.railway.internal` Host, **403** for an unknown one.
 
 ---
 

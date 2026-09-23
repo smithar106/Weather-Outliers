@@ -14,7 +14,13 @@ checklist at the bottom and seen it pass.
 
 ## Topology
 
-Five services in one Railway project:
+Five services carry the application. The deployment also runs two optional
+observability services — a private MLflow tracking server and its own PostgreSQL —
+which nothing in the application depends on; they are documented in
+[../EVALUATION.md](../EVALUATION.md) and omitted from the diagram below because
+deleting them changes nothing a visitor can see.
+
+The five that matter:
 
 ```
                          ┌────────────────────────────┐
