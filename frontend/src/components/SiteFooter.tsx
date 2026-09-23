@@ -30,8 +30,9 @@ export function SiteFooter() {
                 { href: "/", label: "Today's outliers" },
                 { href: "/map", label: "Map" },
                 { href: "/archive", label: "Archive" },
+                { href: "/ask", label: "Ask the data" },
                 { href: "/methodology", label: "Methodology" },
-                { href: "/evaluation", label: "Evaluation results" },
+                { href: "/evaluation", label: "Evaluation" },
                 { href: "/monitor", label: "Monitor" },
               ].map((item) => (
                 <li key={item.href}>

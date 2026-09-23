@@ -3,10 +3,23 @@ import Link from "next/link";
 import { AnomalyCard } from "@/components/AnomalyCard";
 import { ProvenanceStrip } from "@/components/ProvenanceStrip";
 import { RarityTable } from "@/components/RarityTable";
-import { Badge, Callout, Card, Container, EmptyState, LoadFailure, Section } from "@/components/ui";
-import { ApiError, getLatestRankings } from "@/lib/api";
+import {
+  Badge,
+  Callout,
+  Card,
+  Container,
+  EmptyState,
+  LoadFailure,
+  Metric,
+  Section,
+} from "@/components/ui";
+import { ApiError, getHealth, getLatestRankings } from "@/lib/api";
 import {
   categoryStyle,
+  cityLabel,
+  directionWord,
+  formatDeviation,
+  formatHoursAgo,
   formatLocalDate,
   formatNumber,
   formatTimestamp,
@@ -52,12 +65,17 @@ export default async function HomePage() {
     );
   }
 
+  // Freshness is supplementary; a health failure must not take the page down.
+  const health = await getHealth().catch(() => null);
+
   return (
     <>
-      <Hero rankings={rankings} />
+      <Hero rankings={rankings} hoursSincePublish={health?.hours_since_publish ?? null} />
 
       <Container className="pb-16">
-        <Section id="ranking" className="mt-14">
+        <Insight rankings={rankings} />
+
+        <Section id="ranking" className="mt-16">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="eyebrow">The board</p>
@@ -80,17 +98,6 @@ export default async function HomePage() {
               </EmptyState>
             </div>
           ) : (
-            /*
-             * The rarity table is a sibling of the cards rather than a column inside
-             * each one, because it is a different reading: ten percentages together
-             * are comparable at a glance, and the same ten spread across ten cards
-             * are not. On narrow screens it stacks above the cards, which is the
-             * right order — an index, then the detail.
-             *
-             * `lg:items-start` keeps `sticky` working: a stretched grid item is as
-             * tall as the row, and a sticky box that fills its container has nothing
-             * to slide against.
-             */
             <div className="mt-6 grid gap-6 lg:grid-cols-[16.5rem_minmax(0,1fr)] lg:items-start">
               <div className="lg:sticky lg:top-6">
                 <RarityTable events={rankings.events} />
@@ -135,10 +142,10 @@ export default async function HomePage() {
                 See it on the map
               </Link>
               <Link
-                href="/evaluation"
+                href="/ask"
                 className="rounded-lg border border-ink-700 px-4 py-2 text-sm text-paper-dim transition-colors hover:border-accent-dim hover:text-accent-bright"
               >
-                Evaluation results
+                Ask the data
               </Link>
             </div>
           </Card>
@@ -148,98 +155,128 @@ export default async function HomePage() {
   );
 }
 
-function Hero({ rankings }: { rankings: Rankings }) {
+function Hero({ rankings, hoursSincePublish }: { rankings: Rankings; hoursSincePublish: number | null }) {
   const topEvent = rankings.events[0]?.event;
   const categories = new Set(rankings.events.map((ranked) => ranked.event.category));
+  const topStyle = topEvent ? categoryStyle(topEvent.category) : null;
 
   return (
-    <Container className="pt-14 sm:pt-20">
-      <div className="max-w-3xl">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge className="bg-accent/10 text-accent-bright ring-accent-dim/40">
-            Statistical outliers, not records
-          </Badge>
-          <Badge>{formatNumber(rankings.run.cities_total, 0)} cities</Badge>
-          <Badge>1991–2020 baseline</Badge>
-        </div>
+    <Container className="pt-12 sm:pt-16">
+      <div className="flex flex-wrap items-center gap-2.5 text-sm text-paper-faint">
+        <span className="inline-flex items-center gap-1.5">
+          <span
+            aria-hidden="true"
+            className={`size-1.5 rounded-full ${hoursSincePublish !== null ? "bg-positive" : "bg-ink-600"}`}
+          />
+          {hoursSincePublish !== null ? `Updated ${formatHoursAgo(hoursSincePublish)}` : "Freshness unknown"}
+        </span>
+        <span aria-hidden="true">·</span>
+        <span>for {formatLocalDate(rankings.analysis_date, "long")}</span>
+        <span aria-hidden="true">·</span>
+        <span>{formatNumber(rankings.run.cities_total, 0)} cities</span>
+      </div>
 
-        <h1 className="mt-6 font-display text-4xl leading-[1.08] tracking-tight text-balance text-paper sm:text-[3.25rem]">
-          Yesterday was anything but normal.
-        </h1>
-
-        <p className="mt-5 text-lg leading-relaxed text-paper-dim">
-          Every day this site compares {formatNumber(rankings.run.cities_total, 0)} North American
-          cities against their own thirty-year seasonal history and publishes the{" "}
-          {rankings.count} most improbable readings — ranked by how unlikely they were, not by how
-          large they were, so a cold snap in Mérida can outrank a hotter day in Phoenix.
-        </p>
-
+      <div className="mt-10 max-w-3xl">
         {!rankings.is_latest_available && rankings.requested_date && (
-          <Callout tone="warning" className="mt-6">
+          <Callout tone="warning" className="mb-6">
             No analysis was published for {formatLocalDate(rankings.requested_date, "medium")}. The
             most recent successful run is shown instead, for{" "}
             {formatLocalDate(rankings.analysis_date, "medium")}.
           </Callout>
         )}
+
+        <h1 className="font-display text-4xl leading-[1.05] tracking-tight text-balance text-paper sm:text-[3.5rem]">
+          Yesterday was anything but normal.
+        </h1>
+
+        <p className="mt-6 max-w-2xl text-lg leading-relaxed text-paper-dim">
+          Every day this site compares {formatNumber(rankings.run.cities_total, 0)} North American
+          cities against their own thirty-year seasonal history and publishes the{" "}
+          {rankings.count} most improbable readings — ranked by how unlikely they were, not by how
+          large they were, so a cold snap in Mérida can outrank a hotter day in Phoenix.
+        </p>
       </div>
 
-      <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <HeroStat
-          label="Analysis date"
-          value={formatLocalDate(rankings.analysis_date, "medium")}
-          note="The last completed local calendar day for these cities"
-        />
-        <HeroStat
-          label="Published"
-          value={formatTimestamp(rankings.published_at)}
-          note="Computed once by the scheduled pipeline, then served from storage"
-        />
-        <HeroStat
-          label="Most improbable"
-          value={topEvent ? topEvent.city.name : NO_VALUE}
-          note={
-            topEvent
-              ? `${categoryStyle(topEvent.category).label} · score ${formatNumber(
-                  topEvent.calculation.anomaly_score,
-                  2
-                )}`
-              : "No ranked events in this run"
-          }
-          accent={topEvent ? categoryStyle(topEvent.category).color : undefined}
-        />
-        <HeroStat
-          label="Categories on the board"
+      {topEvent && topStyle && (
+        <div className="mt-12">
+          <Metric
+            label="Most improbable reading"
+            value={formatDeviation(topEvent.calculation.deviation, topEvent.unit)}
+            note={`${cityLabel(topEvent.city)} — ${directionWord(topEvent.direction, topEvent.category)}`}
+            accent={topStyle.color}
+          />
+        </div>
+      )}
+
+      <dl className="mt-12 grid grid-cols-2 gap-x-8 gap-y-6 border-t border-ink-800 pt-8 sm:grid-cols-4">
+        <StripItem label="Analysis date" value={formatLocalDate(rankings.analysis_date, "medium")} />
+        <StripItem label="Published" value={formatTimestamp(rankings.published_at)} />
+        <StripItem
+          label="Cities on the board"
           value={String(categories.size)}
           note={[...categories].map((category) => categoryStyle(category).label).join(" · ") || NO_VALUE}
         />
-      </div>
+        <StripItem
+          label="Baseline"
+          value="1991–2020"
+          note="Seasonal, ±7 days"
+        />
+      </dl>
     </Container>
   );
 }
 
-function HeroStat({
-  label,
-  value,
-  note,
-  accent,
-}: {
-  label: string;
-  value: string;
-  note: string;
-  accent?: string;
-}) {
+function StripItem({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
-    <Card className="p-4">
-      <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-paper-faint">
+    <div>
+      <dt className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-paper-faint">
         {label}
-      </p>
-      <p
-        className="tnum mt-2 text-[1.0625rem] leading-tight text-paper"
-        style={accent ? { color: accent } : undefined}
-      >
-        {value}
-      </p>
-      <p className="mt-2 text-xs leading-snug text-paper-faint">{note}</p>
-    </Card>
+      </dt>
+      <dd className="tnum mt-1.5 text-base text-paper">{value}</dd>
+      {note && <p className="mt-1 text-xs text-paper-faint">{note}</p>}
+    </div>
+  );
+}
+
+/**
+ * The lead insight, surfaced without a prompt.
+ *
+ * It is the explanation the pipeline already wrote for the most improbable event —
+ * a model's sentences when one ran, or the deterministic template's otherwise —
+ * presented as the answer to "what happened yesterday?" rather than buried in the
+ * tenth card.
+ */
+function Insight({ rankings }: { rankings: Rankings }) {
+  const top = rankings.events[0];
+  const event = top?.event;
+  if (!event?.explanation) return null;
+
+  const isModel = event.explanation.generator === "llm";
+  const style = categoryStyle(event.category);
+
+  return (
+    <Section className="mt-16">
+      <div className="rounded-lg border border-ink-700/70 bg-ink-850/40 p-6 sm:p-8">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <p className="eyebrow">The brief</p>
+          <Badge className={style.badge}>{style.label}</Badge>
+        </div>
+        <p className="mt-4 max-w-3xl font-display text-xl leading-snug text-balance text-paper sm:text-2xl">
+          {event.explanation.headline}
+        </p>
+        <p className="mt-3 max-w-3xl text-[0.9375rem] leading-relaxed text-paper-dim">
+          {event.explanation.statistical_explanation}
+        </p>
+        <p className="mt-4 text-xs text-paper-faint">
+          {isModel
+            ? `Written by ${event.explanation.llm_provider ?? "a language model"}${
+                event.explanation.model ? ` (${event.explanation.model})` : ""
+              }, grounded in ${event.explanation.tool_call_count} verified tool call${
+                event.explanation.tool_call_count === 1 ? "" : "s"
+              }.`
+            : "Written by the deterministic template, not a language model."}
+        </p>
+      </div>
+    </Section>
   );
 }

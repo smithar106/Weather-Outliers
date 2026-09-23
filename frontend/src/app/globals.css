@@ -93,6 +93,14 @@
     text-rendering: optimizeLegibility;
   }
 
+  /* Headlines and ledes wrap evenly rather than leaving an orphan word. */
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+
   /*
    * A faint radial wash at the top of the page. Purely atmospheric, and behind
    * everything, so it can never reduce text contrast.
@@ -104,8 +112,8 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(90rem 40rem at 50% -14rem, rgba(126, 196, 255, 0.14), transparent 70%),
-      radial-gradient(60rem 30rem at 85% 5%, rgba(167, 139, 250, 0.08), transparent 70%);
+      radial-gradient(90rem 40rem at 50% -14rem, rgba(126, 196, 255, 0.12), transparent 70%),
+      radial-gradient(60rem 30rem at 85% 5%, rgba(167, 139, 250, 0.06), transparent 70%);
   }
 
   /* Tabular figures everywhere a number appears, so columns align. */

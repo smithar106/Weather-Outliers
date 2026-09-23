@@ -151,6 +151,42 @@ export function Stat({
   );
 }
 
+/**
+ * A dominant metric: the number leads, the label explains it, the note trails it.
+ *
+ * This is the pattern the whole site should use for headline figures — a large
+ * value with its explanation beside it, not a value trapped inside a card with a
+ * caption that competes for attention.
+ */
+export function Metric({
+  label,
+  value,
+  note,
+  accent,
+  className = "",
+}: {
+  label: string;
+  value: ReactNode;
+  note?: ReactNode;
+  accent?: string;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-paper-faint">
+        {label}
+      </p>
+      <p
+        className="tnum mt-1.5 text-[2rem] leading-none tracking-tight sm:text-[2.5rem]"
+        style={accent ? { color: accent } : undefined}
+      >
+        {value}
+      </p>
+      {note && <p className="mt-2 text-sm leading-snug text-paper-muted">{note}</p>}
+    </div>
+  );
+}
+
 /** A compact key/value row, used wherever provenance is listed. */
 export function DefRow({
   term,
@@ -250,13 +286,22 @@ export function LoadFailure({
   );
 }
 
-export function EmptyState({ title, children }: { title: string; children?: ReactNode }) {
+export function EmptyState({
+  title,
+  children,
+  action,
+}: {
+  title: string;
+  children?: ReactNode;
+  action?: ReactNode;
+}) {
   return (
-    <Card className="p-8 text-center">
+    <Card className="p-8">
       <p className="font-display text-lg text-paper">{title}</p>
       {children && (
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-paper-muted">{children}</p>
+        <p className="mt-2 max-w-md text-sm leading-relaxed text-paper-muted">{children}</p>
       )}
+      {action && <div className="mt-5">{action}</div>}
     </Card>
   );
 }
