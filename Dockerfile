@@ -17,7 +17,9 @@
 #      See docs/deployment.md.
 #
 # The website has its own self-contained image in frontend/, built with frontend/
-# as its context. `evals/` is not copied into either: nothing in `app/` reads it.
+# as its context. `evals/` is copied here so the evaluation delivery worker
+# (python -m evals.deliver) can run in the same image the workers already use;
+# nothing in `app/` imports it, so the API never executes harness code.
 
 FROM python:3.13-slim AS base
 
@@ -68,6 +70,10 @@ COPY backend/alembic ./alembic
 COPY backend/alembic.ini ./alembic.ini
 # The city registry is data the application reads at seed time, not a fixture.
 COPY data ./data
+# The evaluation harness, for the delivery worker. It imports `app` through the
+# cwd (the app package is /app/app) and needs data/cities.json above. Not
+# imported by `app` itself, so the API never touches it.
+COPY evals ./evals
 
 # Run as a non-root user. The container writes nothing outside /tmp.
 RUN useradd --create-home --uid 10001 appuser \

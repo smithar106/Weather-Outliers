@@ -14,6 +14,21 @@ non-zero if any suite fails. `evals/reports/latest.json` is committed, because i
 is the artefact the frontend renders; every other file in `evals/reports/` is
 ignored so ad-hoc runs do not pollute the repository.
 
+### Running, persisting and emailing
+
+```bash
+# run and print only
+backend/.venv/bin/python -m evals.runner
+
+# run, persist to DATABASE_URL, and email over SMTP (best-effort delivery)
+backend/.venv/bin/python -m evals.deliver
+```
+
+`evals.deliver` runs the same suites as `evals.runner`, then writes the report to
+the application database (`evals/persist.py`) and emails a summary
+(`evals/notify.py`). It is the scheduled entry point in production. See
+`docs/deployment.md` §7 for the worker configuration and the SMTP variables.
+
 ## What is measured
 
 | Suite | What it does | What it reports |

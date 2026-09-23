@@ -25,11 +25,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.deps import EXEMPT_PATHS, client_key, get_limiter
 from app.api.routes import router
+from app.chat import CHAT_PATH
+from app.chat.ui import CHAT_PAGE_HTML
 from app.config import Settings, get_settings
 from app.db import dispose_engine
 from app.domain import METHODOLOGY_VERSION
@@ -89,6 +91,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             {"name": "cities", "description": "The curated registry and per-city detail."},
             {"name": "events", "description": "A single event with its calculation trace."},
             {"name": "meta", "description": "Health and methodology."},
+            {
+                "name": "chat",
+                "description": "Natural-language questions answered by read-only SQL "
+                "(opt-in; calls a language model and costs money).",
+            },
         ],
     )
 
@@ -97,8 +104,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_origins=settings.cors_origins,
         # No credentials: the API is public and unauthenticated, so there is
         # nothing for a cookie to carry and no reason to widen the CORS surface.
+        # POST is allowed only so the chat endpoint (a read-only SQL gateway)
+        # can be called from a browser; every other route rejects POST with 405.
         allow_credentials=False,
-        allow_methods=["GET", "OPTIONS"],
+        allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["*"],
         max_age=3600,
     )
@@ -113,7 +122,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         # The API is read-only by design, not just by the absence of handlers.
         # Rejecting here means a future mistake surfaces as a 405, not a mutation.
-        if request.method not in ("GET", "HEAD", "OPTIONS"):
+        # The one exception is the chat endpoint, whose POST is a read-only SQL
+        # gateway — it never mutates the database.
+        allowed_method = request.method in ("GET", "HEAD", "OPTIONS")
+        allowed_method = allowed_method or (
+            request.method == "POST" and request.url.path == CHAT_PATH
+        )
+        if not allowed_method:
             return _error(
                 status.HTTP_405_METHOD_NOT_ALLOWED,
                 "method_not_allowed",
@@ -210,6 +225,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "latest": "/api/rankings/latest",
             "methodology": "/api/methodology",
         }
+
+    @app.get("/chat", include_in_schema=False)
+    async def chat_page() -> HTMLResponse:
+        """The chat page. The endpoint it calls is off unless CHAT_ENABLED is set."""
+        return HTMLResponse(CHAT_PAGE_HTML)
 
     return app
 

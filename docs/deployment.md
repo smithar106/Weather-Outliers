@@ -426,6 +426,66 @@ Worth setting per service, if the plan allows it:
 
 ---
 
+## 7. Evaluation delivery worker (email + Postgres)
+
+**[AUTHORIZATION REQUIRED]** A worker runs the evaluation harness on a schedule,
+persists the report to the application database, and emails a summary. It uses
+the same image as the backend and the other workers — `evals/` is copied into it
+for exactly this reason — and differs only in start command.
+
+| Setting | Value |
+| --- | --- |
+| Root directory | `/` — the default |
+| Builder | *(nothing to set: `./Dockerfile`)* |
+| Start command | `python -m evals.deliver --skip-unit-tests` |
+| Cron schedule | `0 7 * * *` (07:00 UTC, after the daily run) |
+| Restart policy | Never — a failed run waits for tomorrow |
+
+`--skip-unit-tests` keeps the daily report to the correctness suites. The
+backend pytest suite is CI's job and needs `backend/tests`, which the image does
+not copy; running it daily would re-test code CI already tested.
+
+Variables:
+
+```
+ENVIRONMENT=production
+DATABASE_URL=postgresql+psycopg://...   # the application database (persistence target)
+SMTP_HOST=...                           # generic SMTP; leave empty to persist without emailing
+SMTP_PORT=587
+SMTP_USERNAME=...
+SMTP_PASSWORD=...
+SMTP_FROM=...
+EVAL_EMAIL_TO=...
+SMTP_TLS=true
+```
+
+The evaluation itself stays hermetic (an in-memory SQLite world and the fixture
+provider), so this worker needs no weather key and no LLM key. The report is
+written to the `evaluation_reports` / `evaluation_suites` / `evaluation_metrics`
+tables (see `evals/persist.py`), which the chat endpoint and `wo` can query.
+
+---
+
+## 8. Chat endpoint (NL→SQL)
+
+`POST /api/chat` turns a natural-language question into a read-only SELECT over
+the application database and returns the rows plus the SQL it ran. It is the one
+endpoint that calls a language model per request, so it is off by default and
+gated:
+
+- `CHAT_ENABLED=true` to enable (off otherwise; the endpoint returns 404).
+- `CHAT_API_KEY=…` sets a shared secret; when set, requests must send a matching
+  `X-API-Key` header. Set it in production — the API is otherwise public.
+- Requires `LLM_PROVIDER`, a key, and a model (the same configuration as the
+  investigation agent), and is charged against `AGENT_MONTHLY_MAX_LLM_CALLS` and
+  `AGENT_MONTHLY_USD_BUDGET`.
+
+A minimal chat page is served at `GET /chat`. The generated SQL is restricted to
+a single SELECT and capped at `CHAT_MAX_ROWS` rows; for a hard guarantee against
+any write, grant the backend a read-only database role.
+
+---
+
 ## Environment variable reference
 
 `.env.example` is the authoritative list with inline commentary. What matters for
@@ -447,11 +507,14 @@ deployment is *which service gets what* — the least-privilege split is the poi
 | `AGENT_MONTHLY_MAX_LLM_CALLS` | – | – | ✅ |
 | `BASELINE_*`, `RANKING_*` | – | ✅ read by the API for `/api/methodology` | ✅ |
 | `LOG_LEVEL` | – | optional | optional |
+| `CHAT_ENABLED` / `CHAT_API_KEY` / `CHAT_MAX_ROWS` | – | ✅ (the `/api/chat` endpoint) | – |
+| `SMTP_*` / `EVAL_EMAIL_TO` | – | – | evaluation worker only (§7) |
 
 A `–` means the service ignores it. A ❌ means setting it there would be a
 mistake, not merely unnecessary. "Workers" here means the two ranking workers;
 `worker-baselines` takes only the four variables listed in §4c, because a
-climatology build reads no model and scores nothing.
+climatology build reads no model and scores nothing. The evaluation delivery
+worker (§7) takes `DATABASE_URL` plus the `SMTP_*` variables and nothing else.
 
 ---
 

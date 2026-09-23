@@ -537,6 +537,23 @@ shared record of anything.
 
 ---
 
+## Delivery: email + Postgres
+
+`python -m evals.deliver` runs the same suites as `evals.runner`, then:
+
+1. **Persists** the report to the application database — the
+   `evaluation_reports`, `evaluation_suites` and `evaluation_metrics` tables —
+   so it is queryable by `wo` and by the NL→SQL chat endpoint.
+2. **Emails** a plain-text summary over SMTP, when configured.
+
+Both delivery steps are best-effort by design: the exit code belongs to the
+evaluation, not to the mail transport or the database write. In production a
+scheduled worker runs `python -m evals.deliver --skip-unit-tests` — the backend
+pytest suite is CI's job and needs `backend/tests`, which the image does not
+copy. See `docs/deployment.md` §7.
+
+---
+
 ## Reproducing everything
 
 ```bash

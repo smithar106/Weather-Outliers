@@ -18,10 +18,10 @@ ignore = [
 ]
 
 [lint.isort]
-# `app` and `evals` are both importable from the repository root once the backend
-# is installed, and Ruff cannot infer that from here. Declaring them keeps import
-# order identical to what `backend/pyproject.toml` produces inside `backend/`.
-known-first-party = ["app", "evals"]
+# `app`, `evals` and `wo` are all importable from the repository root once the
+# backend is installed, and Ruff cannot infer that from here. Declaring them keeps
+# import order identical to what `backend/pyproject.toml` produces inside `backend/`.
+known-first-party = ["app", "evals", "wo"]
 
 [lint.per-file-ignores]
 # The suites build long, self-documenting metric and case literals; wrapping them

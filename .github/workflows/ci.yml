@@ -75,7 +75,7 @@ jobs:
           pip install -e ".[dev]"
 
       - name: Lint
-        run: ruff check backend evals
+        run: ruff check backend evals wo
 
       - name: Migrations apply cleanly from empty
         working-directory: backend
@@ -125,6 +125,33 @@ jobs:
           name: evaluation-report
           path: evals/reports/latest.json
           if-no-files-found: warn
+
+  cli:
+    name: Observability CLI and delivery (tests)
+    runs-on: ubuntu-latest
+
+    env:
+      ENVIRONMENT: test
+      WEATHER_PROVIDER: fixture
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "./backend[dev]"
+
+      - name: Tests
+        # `wo` (the read-only observability CLI) and the evaluation delivery
+        # modules (persist + email) are tested on SQLite, without MLflow or SMTP.
+        run: pytest evals/tests wo/tests
 
   frontend:
     name: Frontend (lint + types + build)
@@ -330,6 +357,21 @@ jobs:
             -e ENVIRONMENT=test \
             weather-outliers-backend:ci \
             python -m app.pipeline --help
+
+      # The evaluation delivery worker runs `python -m evals.deliver` in the same
+      # image. The first check proves the entrypoint imports; the second proves
+      # `app` resolves to the copied /app/app namespace package, not a
+      # site-packages shadow — the exact failure that shipped once in this image.
+      - name: The evaluation worker entrypoint runs in the backend image
+        run: |
+          docker run --rm \
+            -e ENVIRONMENT=test -e WEATHER_PROVIDER=fixture -e LLM_PROVIDER=none \
+            weather-outliers-backend:ci \
+            python -m evals.deliver --help
+          docker run --rm \
+            -e ENVIRONMENT=test -e WEATHER_PROVIDER=fixture -e LLM_PROVIDER=none \
+            weather-outliers-backend:ci \
+            python -c "import evals.environment as e; e.configure(); import app; p=list(app.__path__); assert p == ['/app/app'], p"
 
       # Any HTTP status counts. Without a backend the pages render an error state,
       # which is correct behaviour; what is being tested is that the standalone

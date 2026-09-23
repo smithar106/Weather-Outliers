@@ -153,6 +153,29 @@ class Settings(BaseSettings):
         description="Override path to cities.json. Empty means auto-discover ../data/cities.json.",
     )
 
+    # ---------------------------------------------------------------- email
+    # Used only by the evaluation delivery worker (``python -m evals.deliver``),
+    # which emails the evaluation summary over SMTP. Every field defaults to empty
+    # so the rest of the application never sends email by accident.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    smtp_tls: bool = True
+    eval_email_to: str = ""
+
+    # ---------------------------------------------------------------- chat
+    # The NL→SQL chat endpoint (``POST /api/chat``). Off by default: it calls a
+    # language model per question and is the only endpoint that spends money per
+    # request, so it is enabled deliberately. In production set CHAT_API_KEY and
+    # require the matching ``X-API-Key`` header — a public, unauthenticated chat
+    # endpoint is a public budget.
+    chat_enabled: bool = False
+    chat_api_key: str = ""
+    #: Hard cap on rows the generated SQL may return, enforced by the executor.
+    chat_max_rows: int = 100
+
     # ------------------------------------------------------------- validators
     @field_validator("database_url")
     @classmethod
@@ -201,6 +224,11 @@ class Settings(BaseSettings):
     @property
     def reference_period_label(self) -> str:
         return f"{self.baseline_start_year}-{self.baseline_end_year}"
+
+    @property
+    def smtp_configured(self) -> bool:
+        """True only when the host, sender and recipient are all set."""
+        return bool(self.smtp_host and self.smtp_from and self.eval_email_to)
 
     @property
     def llm_enabled(self) -> bool:

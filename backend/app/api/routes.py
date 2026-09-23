@@ -17,10 +17,12 @@ from __future__ import annotations
 import logging
 from datetime import UTC, date, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.agent.investigator import month_to_date_budget
+from app.agent.llm import LLMConfigError, get_llm_client
 from app.api.deps import Page, history_range, pagination, parse_iso_date
 from app.api.serializers import (
     baseline_out,
@@ -31,6 +33,7 @@ from app.api.serializers import (
     observation_out,
     run_out,
 )
+from app.chat import CHAT_PATH, answer_question
 from app.config import Settings, get_settings
 from app.db import get_db
 from app.domain import METHODOLOGY_VERSION, RunStatus
@@ -47,6 +50,8 @@ from app.provenance import LIMITATIONS, RANKING_BASIS, data_sources, methodology
 from app.schemas import (
     ArchiveEntryOut,
     ArchiveOut,
+    ChatRequest,
+    ChatResponse,
     CityDetailOut,
     CityHistoryOut,
     CityListOut,
@@ -549,3 +554,75 @@ def get_methodology(
     ).scalar_one_or_none()
     _set_cache(response, settings)
     return MethodologyOut.model_validate(methodology(settings, registry_version))
+
+
+# ---------------------------------------------------------------------------
+# Chat (NL→SQL)
+# ---------------------------------------------------------------------------
+
+
+@router.post(CHAT_PATH, response_model=ChatResponse, tags=["chat"])
+def chat(
+    request: Request,
+    payload: ChatRequest,
+    session: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> ChatResponse:
+    """Turn a natural-language question into a read-only SQL query and an answer.
+
+    This is the one endpoint that calls a language model and therefore costs
+    money per request, so it is off unless ``CHAT_ENABLED`` is set and, when
+    ``CHAT_API_KEY`` is configured, requires the matching ``X-API-Key`` header.
+    """
+    if not settings.chat_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chat is not enabled (set CHAT_ENABLED=true).",
+        )
+    if settings.chat_api_key and request.headers.get("x-api-key") != settings.chat_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing X-API-Key.",
+        )
+    if not settings.llm_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="No LLM provider is configured; chat is unavailable.",
+        )
+    try:
+        client = get_llm_client(settings)
+    except LLMConfigError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        ) from exc
+    if client is None:  # pragma: no cover - llm_enabled guards this
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="No LLM provider is configured.",
+        )
+
+    budget = month_to_date_budget(session, settings)
+    if budget.exhausted:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=budget.reason or "The monthly AI budget has been reached.",
+        )
+
+    try:
+        result = answer_question(
+            payload.question, client=client, session=session, max_rows=settings.chat_max_rows
+        )
+    finally:
+        client.close()
+
+    return ChatResponse(
+        question=result.question,
+        answer=result.answer,
+        sql=result.sql,
+        explanation=result.explanation,
+        columns=list(result.columns),
+        rows=[list(row) for row in result.rows],
+        row_count=len(result.rows),
+        truncated=result.truncated,
+        refused=result.refused,
+    )

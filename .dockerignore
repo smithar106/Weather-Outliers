@@ -40,8 +40,9 @@ credentials*.json
 # ---- Large artefacts nothing in a running container reads ----
 docs/screenshots
 frontend
-# The backend image does not copy the harness: nothing in backend/app reads it, and
-# the harness needs dev extras this image does not install. The website renders the
-# committed copy at frontend/src/data/evaluation-report.json, which CI checks
-# against evals/reports/latest.json.
-evals
+# The serving image (./Dockerfile) does not COPY the harness — nothing in
+# backend/app reads it — but the evaluation delivery worker (evals/Dockerfile)
+# does, so `evals` stays in the shared root context rather than being excluded
+# here. The website renders the committed copy at
+# frontend/src/data/evaluation-report.json, which CI checks against
+# evals/reports/latest.json.

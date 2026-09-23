@@ -369,3 +369,28 @@ class ErrorOut(BaseModel):
     error: str
     detail: str
     status_code: int
+
+
+# ---------------------------------------------------------------------------
+# Chat (NL→SQL)
+# ---------------------------------------------------------------------------
+
+
+class ChatRequest(ApiModel):
+    question: str = Field(min_length=1, max_length=1000)
+
+
+class ChatResponse(ApiModel):
+    question: str
+    answer: str
+    #: The SQL the model produced and the executor ran, so the answer is auditable.
+    sql: str | None = None
+    explanation: str | None = None
+    columns: list[str] = Field(default_factory=list)
+    rows: list[list] = Field(default_factory=list)
+    row_count: int = 0
+    #: True when the row cap was hit, so a caller never mistakes a truncation for
+    #: a complete result.
+    truncated: bool = False
+    #: True when the question could not be answered with a read-only query.
+    refused: bool = False

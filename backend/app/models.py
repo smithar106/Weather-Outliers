@@ -421,3 +421,94 @@ class AgentExplanation(Base):
         UniqueConstraint("event_id", "run_id", name="uq_explanation_event_run"),
         Index("ix_explanations_event", "event_id"),
     )
+
+
+class EvaluationReport(Base):
+    """One evaluation run, persisted so the results are queryable in PostgreSQL.
+
+    Written by ``evals/persist.py``, read by ``wo`` and (later) the NL→SQL agent.
+    The scalar columns carry the headline numbers; ``report_json`` preserves the
+    full report for exact reconstruction, and ``suites``/``metrics`` hold the
+    normalized detail SQL can aggregate over.
+    """
+
+    __tablename__ = "evaluation_reports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    git_commit: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    git_dirty: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    methodology_version: Mapped[str] = mapped_column(String(16), nullable=False)
+    suites_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    suites_passed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    cases_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    cases_passed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    report_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+
+    suites: Mapped[list[EvaluationSuite]] = relationship(
+        back_populates="report", cascade="all, delete-orphan"
+    )
+    metrics: Mapped[list[EvaluationMetric]] = relationship(
+        cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (Index("ix_eval_reports_generated_at", "generated_at"),)
+
+
+class EvaluationSuite(Base):
+    """One evaluation suite's outcome, per report."""
+
+    __tablename__ = "evaluation_suites"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    report_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("evaluation_reports.id", ondelete="CASCADE"), nullable=False
+    )
+    suite_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    cases_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    cases_passed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    report: Mapped[EvaluationReport] = relationship(back_populates="suites")
+
+    __table_args__ = (
+        UniqueConstraint("report_id", "suite_id", name="uq_eval_suite_report"),
+        Index("ix_eval_suites_report", "report_id"),
+    )
+
+
+class EvaluationMetric(Base):
+    """One measured quantity from one suite, normalised so SQL can aggregate it.
+
+    ``value_num`` holds numeric metrics; ``value_text`` holds everything else.
+    ``value_type`` says which is authoritative, so a ``None`` value ("not
+    measured") is never mistaken for a zero.
+    """
+
+    __tablename__ = "evaluation_metrics"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    report_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("evaluation_reports.id", ondelete="CASCADE"), nullable=False
+    )
+    suite_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    suite_title: Mapped[str] = mapped_column(String(200), nullable=False)
+    label: Mapped[str] = mapped_column(String(200), nullable=False)
+    value_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    value_num: Mapped[float | None] = mapped_column(Float, nullable=True)
+    value_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    unit: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    __table_args__ = (
+        Index("ix_eval_metrics_report_suite", "report_id", "suite_id"),
+        Index("ix_eval_metrics_label", "label"),
+    )
