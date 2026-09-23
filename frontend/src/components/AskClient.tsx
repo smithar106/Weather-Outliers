@@ -64,7 +64,7 @@ export function AskClient() {
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-12 sm:px-8 sm:py-16">
-      <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-paper-faint">
+      <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-paper-faint">
         Ask the data
       </p>
       <h1 className="mt-2 font-display text-3xl tracking-tight text-balance text-paper sm:text-4xl">
@@ -140,7 +140,7 @@ export function AskClient() {
 
       {status === "done" && result && (
         <div className="mt-10">
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-paper-faint">
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-paper-faint">
             Answer
           </p>
           <p className="mt-2 font-display text-xl leading-snug text-balance text-paper sm:text-2xl">

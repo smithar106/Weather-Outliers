@@ -172,20 +172,25 @@ function Hero({ rankings, hoursSincePublish }: { rankings: Rankings; hoursSinceP
         </span>
         <span aria-hidden="true">·</span>
         <span>for {formatLocalDate(rankings.analysis_date, "long")}</span>
-        <span aria-hidden="true">·</span>
-        <span>{formatNumber(rankings.run.cities_total, 0)} cities</span>
       </div>
 
-      <div className="mt-10 max-w-3xl">
-        {!rankings.is_latest_available && rankings.requested_date && (
-          <Callout tone="warning" className="mb-6">
-            No analysis was published for {formatLocalDate(rankings.requested_date, "medium")}. The
-            most recent successful run is shown instead, for{" "}
-            {formatLocalDate(rankings.analysis_date, "medium")}.
-          </Callout>
-        )}
+      {!rankings.is_latest_available && rankings.requested_date && (
+        <Callout tone="warning" className="mt-6">
+          No analysis was published for {formatLocalDate(rankings.requested_date, "medium")}. The
+          most recent successful run is shown instead, for{" "}
+          {formatLocalDate(rankings.analysis_date, "medium")}.
+        </Callout>
+      )}
 
-        <h1 className="font-display text-4xl leading-[1.05] tracking-tight text-balance text-paper sm:text-[3.5rem]">
+      <div className="mt-8 max-w-3xl">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge className="bg-accent/10 text-accent-bright ring-accent-dim/40">
+            Statistical outliers, not records
+          </Badge>
+          <Badge>1991–2020 baseline</Badge>
+        </div>
+
+        <h1 className="mt-6 font-display text-4xl leading-[1.05] tracking-tight text-balance text-paper sm:text-[3.5rem]">
           Yesterday was anything but normal.
         </h1>
 
@@ -212,14 +217,16 @@ function Hero({ rankings, hoursSincePublish }: { rankings: Rankings; hoursSinceP
         <StripItem label="Analysis date" value={formatLocalDate(rankings.analysis_date, "medium")} />
         <StripItem label="Published" value={formatTimestamp(rankings.published_at)} />
         <StripItem
-          label="Cities on the board"
-          value={String(categories.size)}
-          note={[...categories].map((category) => categoryStyle(category).label).join(" · ") || NO_VALUE}
+          label="Cities analysed"
+          value={`${formatNumber(rankings.run.cities_with_data, 0)} of ${formatNumber(
+            rankings.run.cities_total,
+            0
+          )}`}
         />
         <StripItem
-          label="Baseline"
-          value="1991–2020"
-          note="Seasonal, ±7 days"
+          label="Categories"
+          value={String(categories.size)}
+          note={[...categories].map((category) => categoryStyle(category).label).join(" · ") || NO_VALUE}
         />
       </dl>
     </Container>
@@ -229,7 +236,7 @@ function Hero({ rankings, hoursSincePublish }: { rankings: Rankings; hoursSinceP
 function StripItem({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
     <div>
-      <dt className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-paper-faint">
+      <dt className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-paper-faint">
         {label}
       </dt>
       <dd className="tnum mt-1.5 text-base text-paper">{value}</dd>

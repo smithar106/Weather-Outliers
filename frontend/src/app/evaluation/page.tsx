@@ -111,7 +111,7 @@ export default function EvaluationPage() {
           </Badge>
         </div>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid grid-cols-2 gap-x-8 gap-y-6 border-t border-ink-800 pt-8 sm:grid-cols-4">
           <Headline
             label="Suites"
             value={`${formatNumber(totals.suites_passed, 0)} / ${formatNumber(totals.suites_total, 0)}`}
@@ -213,13 +213,13 @@ export default function EvaluationPage() {
 
 function Headline({ label, value, note }: { label: string; value: string; note: string }) {
   return (
-    <Card className="p-4">
+    <div>
       <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-paper-faint">
         {label}
       </p>
-      <p className="tnum mt-2 text-[1.0625rem] leading-tight text-paper">{value}</p>
+      <p className="tnum mt-1.5 text-[1.375rem] leading-none text-paper">{value}</p>
       <p className="mt-2 text-xs leading-snug text-paper-faint">{note}</p>
-    </Card>
+    </div>
   );
 }
 

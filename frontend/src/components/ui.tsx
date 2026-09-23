@@ -173,7 +173,7 @@ export function Metric({
 }) {
   return (
     <div className={className}>
-      <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-paper-faint">
+      <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-paper-faint">
         {label}
       </p>
       <p

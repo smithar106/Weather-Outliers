@@ -26,6 +26,7 @@ import {
   Dot,
   EmptyState,
   LoadFailure,
+  Metric,
   Section,
   SectionHeading,
 } from "@/components/ui";
@@ -142,50 +143,64 @@ export default async function CityPage({ params }: PageProps) {
           }
         />
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="p-4">
-            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-paper-faint">
+        {detail.events.length > 0 ? (
+          <div className="mt-10">
+            <Metric
+              label="Most unusual reading"
+              value={formatDeviation(detail.events[0].calculation.deviation, detail.events[0].unit)}
+              note={`${metricShortLabel(detail.events[0].metric)} — ${directionWord(
+                detail.events[0].direction,
+                detail.events[0].category
+              )}`}
+              accent={categoryStyle(detail.events[0].category).color}
+            />
+          </div>
+        ) : (
+          <p className="mt-8 text-paper-muted">
+            Nothing crossed the scoring threshold for this city on the latest analysis.
+          </p>
+        )}
+
+        <dl className="mt-10 grid grid-cols-2 gap-x-8 gap-y-6 border-t border-ink-800 pt-8 sm:grid-cols-4">
+          <div>
+            <dt className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-paper-faint">
               Coordinates
-            </p>
-            <p className="tnum mt-2 text-[0.9375rem] text-paper">
+            </dt>
+            <dd className="tnum mt-1.5 text-base text-paper">
               {formatNumber(city.latitude, 3)}, {formatNumber(city.longitude, 3)}
-            </p>
-            <p className="mt-2 text-xs text-paper-faint">City centre, from the registry</p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-paper-faint">
+            </dd>
+            <p className="mt-1 text-xs text-paper-faint">City centre, from the registry</p>
+          </div>
+          <div>
+            <dt className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-paper-faint">
               Time zone
-            </p>
-            <p className="mt-2 text-[0.9375rem] text-paper">{city.timezone}</p>
-            <p className="mt-2 text-xs text-paper-faint">
-              IANA identifier, so daylight saving is handled by rule rather than by offset
-            </p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-paper-faint">
+            </dt>
+            <dd className="mt-1.5 text-base text-paper">{city.timezone}</dd>
+            <p className="mt-1 text-xs text-paper-faint">IANA identifier</p>
+          </div>
+          <div>
+            <dt className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-paper-faint">
               Population
-            </p>
-            <p className="tnum mt-2 text-[0.9375rem] text-paper">
+            </dt>
+            <dd className="tnum mt-1.5 text-base text-paper">
               {city.population === null ? NO_VALUE : formatNumber(city.population, 0)}
-            </p>
-            <p className="mt-2 text-xs text-paper-faint">
+            </dd>
+            <p className="mt-1 text-xs text-paper-faint">
               {city.population_source ?? "Not sourced for this city"}
             </p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-paper-faint">
+          </div>
+          <div>
+            <dt className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-paper-faint">
               Scored events
-            </p>
-            <p className="tnum mt-2 text-[0.9375rem] text-paper">
-              {formatNumber(detail.events.length, 0)}
-            </p>
-            <p className="mt-2 text-xs text-paper-faint">
+            </dt>
+            <dd className="tnum mt-1.5 text-base text-paper">{formatNumber(detail.events.length, 0)}</dd>
+            <p className="mt-1 text-xs text-paper-faint">
               {detail.events.length === 0
                 ? "Nothing crossed the scoring threshold"
                 : "Every metric that scored, not only the one on the board"}
             </p>
-          </Card>
-        </div>
+          </div>
+        </dl>
       </Section>
 
       {/* ---------------- Latest observation ---------------- */}
