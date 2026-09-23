@@ -122,10 +122,10 @@ export function TrendChart({
               x2={WIDTH - PAD.right}
               y1={y(tick)}
               y2={y(tick)}
-              stroke="#1e2a47"
+              stroke="var(--color-ink-700)"
               strokeWidth="1"
             />
-            <text x={PAD.left - 8} y={y(tick) + 3} textAnchor="end" className="fill-[#5d6c88] text-[10px]">
+            <text x={PAD.left - 8} y={y(tick) + 3} textAnchor="end" className="fill-paper-faint text-[10px]">
               {formatNumber(tick, ySpan < 5 ? 1 : 0)}
             </text>
           </g>
@@ -155,7 +155,7 @@ export function TrendChart({
                     cy={y(value)}
                     r={sorted.length === 1 ? 4 : 2.6}
                     fill={spec.color}
-                    stroke="#060912"
+                    stroke="var(--color-ink-900)"
                     strokeWidth="1"
                   />
                 );
@@ -163,7 +163,7 @@ export function TrendChart({
           </g>
         ))}
 
-        <text x={PAD.left} y={HEIGHT - 10} className="fill-[#5d6c88] text-[10px]">
+        <text x={PAD.left} y={HEIGHT - 10} className="fill-paper-faint text-[10px]">
           {formatLocalDate(sorted[0].local_date, "short")}
         </text>
         {sorted.length > 1 && (
@@ -171,7 +171,7 @@ export function TrendChart({
             x={WIDTH - PAD.right}
             y={HEIGHT - 10}
             textAnchor="end"
-            className="fill-[#5d6c88] text-[10px]"
+            className="fill-paper-faint text-[10px]"
           >
             {formatLocalDate(sorted[sorted.length - 1].local_date, "short")}
           </text>

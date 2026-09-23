@@ -133,7 +133,7 @@ export function AnomalyMap({ events }: { events: RankedEvent[] }) {
         "height:26px",
         "border-radius:9999px",
         `background:${style.color}`,
-        "border:2px solid rgba(6,9,18,0.85)",
+        "border:2px solid rgba(10,16,32,0.85)",
         `box-shadow:0 0 0 4px ${style.color}22, 0 6px 16px -4px rgba(0,0,0,0.75)`,
         "color:#060912",
         "font:600 11px/1 ui-monospace, monospace",

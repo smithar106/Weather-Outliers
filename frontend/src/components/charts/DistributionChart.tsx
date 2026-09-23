@@ -82,7 +82,7 @@ export function DistributionChart({
             x2={WIDTH - PAD.right}
             y1={y(maxCount * fraction)}
             y2={y(maxCount * fraction)}
-            stroke="#1e2a47"
+            stroke="var(--color-ink-700)"
             strokeWidth="1"
           />
         ))}
@@ -100,7 +100,7 @@ export function DistributionChart({
               width={barWidth}
               height={Math.max(PAD.top + plotHeight - top, 0)}
               rx="1.5"
-              fill="#2a3a5e"
+              fill="var(--color-ink-600)"
             />
           );
         })}
@@ -111,7 +111,7 @@ export function DistributionChart({
           x2={WIDTH - PAD.right}
           y1={PAD.top + plotHeight}
           y2={PAD.top + plotHeight}
-          stroke="#2a3a5e"
+          stroke="var(--color-ink-600)"
           strokeWidth="1"
         />
 
@@ -130,10 +130,10 @@ export function DistributionChart({
         )}
 
         {/* Y axis: 0 and the peak count only. More would be clutter. */}
-        <text x={PAD.left - 8} y={PAD.top + plotHeight} textAnchor="end" className="fill-[#5d6c88] text-[10px]">
+        <text x={PAD.left - 8} y={PAD.top + plotHeight} textAnchor="end" className="fill-paper-faint text-[10px]">
           0
         </text>
-        <text x={PAD.left - 8} y={PAD.top + 8} textAnchor="end" className="fill-[#5d6c88] text-[10px]">
+        <text x={PAD.left - 8} y={PAD.top + 8} textAnchor="end" className="fill-paper-faint text-[10px]">
           {maxCount}
         </text>
 
@@ -143,7 +143,7 @@ export function DistributionChart({
             x={x(value)}
             y={HEIGHT - 10}
             textAnchor={index === 0 ? "start" : index === ticks.length - 1 ? "end" : "middle"}
-            className="fill-[#5d6c88] text-[10px]"
+            className="fill-paper-faint text-[10px]"
           >
             {formatNumber(value, Math.abs(span) < 5 ? 1 : 0)}
           </text>

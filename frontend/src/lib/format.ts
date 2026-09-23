@@ -224,31 +224,31 @@ export const CATEGORY_STYLES: Record<CategoryId, CategoryStyle> = {
   heat: {
     label: "Heat",
     color: "#FF6B4A",
-    badge: "bg-[#FF6B4A]/12 text-[#FF9C85] ring-[#FF6B4A]/30",
+    badge: "bg-[#FF6B4A]/18 text-[#FF9C85] ring-[#FF6B4A]/45",
     text: "text-[#FF9C85]",
   },
   cold: {
     label: "Cold",
     color: "#56B4F5",
-    badge: "bg-[#56B4F5]/12 text-[#8FCDF9] ring-[#56B4F5]/30",
+    badge: "bg-[#56B4F5]/18 text-[#8FCDF9] ring-[#56B4F5]/45",
     text: "text-[#8FCDF9]",
   },
   temperature: {
     label: "Temperature",
     color: "#A78BFA",
-    badge: "bg-[#A78BFA]/12 text-[#C4B2FC] ring-[#A78BFA]/30",
+    badge: "bg-[#A78BFA]/18 text-[#C4B2FC] ring-[#A78BFA]/45",
     text: "text-[#C4B2FC]",
   },
   precipitation: {
     label: "Precipitation",
     color: "#22C7B8",
-    badge: "bg-[#22C7B8]/12 text-[#6FDDD2] ring-[#22C7B8]/30",
+    badge: "bg-[#22C7B8]/18 text-[#6FDDD2] ring-[#22C7B8]/45",
     text: "text-[#6FDDD2]",
   },
   wind: {
     label: "Wind",
     color: "#E8C84A",
-    badge: "bg-[#E8C84A]/12 text-[#F0DA86] ring-[#E8C84A]/30",
+    badge: "bg-[#E8C84A]/18 text-[#F0DA86] ring-[#E8C84A]/45",
     text: "text-[#F0DA86]",
   },
 };

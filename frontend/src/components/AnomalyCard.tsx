@@ -14,7 +14,6 @@ import {
   formatPercentile,
   formatZScore,
   metricShortLabel,
-  observationTypeLabel,
 } from "@/lib/format";
 import type { RankedEvent } from "@/lib/types";
 
@@ -150,15 +149,19 @@ export function AnomalyCard({ ranked }: { ranked: RankedEvent }) {
             </div>
           )}
 
+          {/*
+           * No provenance strip here. Observation type, source dataset and
+           * methodology version are the same three strings on all ten cards, so
+           * repeating them ten times told a reader nothing and cost a line of
+           * chrome each time. The data-tier badge in the header still marks
+           * modelled data as modelled, the caveats paragraph behind "Full
+           * breakdown" still says so in words, and the city page carries the
+           * dataset and methodology in full.
+           */}
           <footer className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-paper-faint">
-            <span>{observationTypeLabel(event.observation_type)}</span>
-            <span aria-hidden="true">·</span>
-            <span className="tnum">{event.source_dataset}</span>
-            <span aria-hidden="true">·</span>
-            <span className="tnum">methodology {event.methodology_version}</span>
             <Link
               href={`/city/${event.city.id}`}
-              className="link-underline ml-auto text-accent-bright"
+              className="link-underline text-accent-bright"
             >
               Full breakdown →
             </Link>

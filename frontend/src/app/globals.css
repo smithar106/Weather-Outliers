@@ -8,26 +8,44 @@
  * whole point of a site whose claim is that the arithmetic is auditable.
  */
 
+/*
+ * The whole ramp was lifted once the first version proved too dark to read
+ * comfortably. Two specific faults drove the numbers below rather than taste:
+ * `paper-faint` sat at 3.4:1 against the card surface and is the colour used for
+ * the 11px eyebrow labels and figure captions, which is under AA for small text;
+ * and `ink-700`, the 1px border on every card, sat under 2:1 against both the
+ * page ground and the surface, so a column of ten cards read as one
+ * undifferentiated dark field with no edges.
+ *
+ * Every replacement gains contrast rather than trading it: the surfaces are
+ * lighter *and* the type on them is lighter still. The ratios in the comments
+ * are computed against `--color-ink-850`, the card surface, which is the
+ * strictest of the three grounds a given colour actually sits on.
+ */
 @theme {
   /* Ground */
-  --color-ink-950: #060912;
-  --color-ink-900: #0a0f1c;
-  --color-ink-850: #0e1526;
-  --color-ink-800: #131c32;
-  --color-ink-750: #18223c;
-  --color-ink-700: #1e2a47;
-  --color-ink-600: #2a3a5e;
+  --color-ink-950: #0a1020;
+  --color-ink-900: #111a2e;
+  --color-ink-850: #16223a;
+  --color-ink-800: #1f2e4c;
+  --color-ink-750: #27385c;
+  /* Borders. `ink-700` is the card edge and `ink-600` the emphasised one; both
+     are now visible against the surface instead of merely implied. */
+  --color-ink-700: #3a4d79;
+  --color-ink-600: #506699;
 
-  /* Type */
-  --color-paper: #eaeff9;
-  --color-paper-dim: #b6c2d8;
-  --color-paper-muted: #8494b1;
-  --color-paper-faint: #5d6c88;
+  /* Type: 14.8:1 · 11.7:1 · 8.3:1 · 5.7:1 — AA or better at every step,
+     including the smallest labels, which use `faint`. */
+  --color-paper: #f4f7fd;
+  --color-paper-dim: #d4deee;
+  --color-paper-muted: #aebcd6;
+  --color-paper-faint: #8b9cba;
 
-  /* One accent, used for interaction and emphasis only */
-  --color-accent: #6cb8f7;
-  --color-accent-bright: #a3d4fb;
-  --color-accent-dim: #2d5f8f;
+  /* One accent, used for interaction and emphasis only. `accent-dim` is a
+     border and underline colour, not a text colour. */
+  --color-accent: #7ec4ff;
+  --color-accent-bright: #bfe2ff;
+  --color-accent-dim: #4a83bd;
 
   /* Weather categories. Kept in sync with CATEGORY_STYLES in lib/format.ts. */
   --color-heat: #ff6b4a;
@@ -74,8 +92,8 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(90rem 40rem at 50% -14rem, rgba(108, 184, 247, 0.1), transparent 70%),
-      radial-gradient(60rem 30rem at 85% 5%, rgba(167, 139, 250, 0.06), transparent 70%);
+      radial-gradient(90rem 40rem at 50% -14rem, rgba(126, 196, 255, 0.14), transparent 70%),
+      radial-gradient(60rem 30rem at 85% 5%, rgba(167, 139, 250, 0.08), transparent 70%);
   }
 
   /* Tabular figures everywhere a number appears, so columns align. */
@@ -92,7 +110,7 @@
   }
 
   ::selection {
-    background: rgba(108, 184, 247, 0.28);
+    background: rgba(126, 196, 255, 0.3);
   }
 }
 
@@ -194,7 +212,7 @@
   filter: invert(1) brightness(1.4);
 }
 .maplibregl-ctrl-attrib {
-  background: rgba(6, 9, 18, 0.82) !important;
+  background: rgba(10, 16, 32, 0.82) !important;
   color: var(--color-paper-dim) !important;
 }
 .maplibregl-ctrl-attrib a {
