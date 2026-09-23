@@ -31,6 +31,18 @@ dev = [
     "ruff>=0.8,<1.0",
 ]
 
+# Telemetry and the evaluation harness's experiment log. `mlflow-skinny`, not
+# `mlflow`: the full distribution pulls in pandas, numpy, scipy, Flask and
+# Alembic's own pinned range, and this backend deliberately has none of those
+# (see the note above the runtime dependencies). Skinny carries the tracking
+# client, the tracing SDK and the fluent API, which is everything this project
+# calls. Kept out of the base set so the deployed image never installs it: the
+# application does not need MLflow to run, and `app.observability.tracing`
+# degrades to no-ops when it is absent.
+tracing = [
+    "mlflow-skinny>=2.19,<4.0",
+]
+
 [build-system]
 requires = ["setuptools>=75"]
 build-backend = "setuptools.build_meta"

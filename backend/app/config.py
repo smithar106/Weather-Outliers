@@ -136,6 +136,18 @@ class Settings(BaseSettings):
     pipeline_finalize_lag_days: int = 6
     pipeline_min_city_completeness: float = 0.80
 
+    # ----------------------------------------------------------- observability
+    # Tracing is opt-in and defaults to off, so the deployed image attempts no
+    # MLflow import and contacts no tracking server unless an operator asks for
+    # it. MLflow itself is an optional extra, not a dependency. See EVALUATION.md.
+    mlflow_tracing_enabled: bool = False
+    #: Empty means MLflow's default, which is a local ``./mlruns`` directory. A
+    #: ``file:`` or ``databricks:`` URI needs no server at all; an ``http://`` URI
+    #: is a server whose authentication is the operator's responsibility, because
+    #: MLflow's tracking server ships without any.
+    mlflow_tracking_uri: str = ""
+    mlflow_experiment: str = "weather-outliers"
+
     cities_file: str = Field(
         default="",
         description="Override path to cities.json. Empty means auto-discover ../data/cities.json.",

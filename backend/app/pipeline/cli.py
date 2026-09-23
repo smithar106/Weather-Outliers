@@ -27,10 +27,12 @@ import logging
 import sys
 from datetime import date, datetime
 
+from app.agent.investigator import prompt_identity
 from app.config import get_settings
 from app.db import dispose_engine, session_scope
-from app.domain import DataTier, RunStatus
+from app.domain import METHODOLOGY_VERSION, DataTier, RunStatus
 from app.logging_setup import configure_logging
+from app.observability import tracing
 from app.pipeline.runner import (
     Pipeline,
     PipelineError,
@@ -278,6 +280,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.log_level:
         settings = settings.model_copy(update={"log_level": args.log_level})
     configure_logging(settings)
+    # Tracing is configured once per process, here, and nowhere inside the
+    # pipeline itself. A run must behave identically whether or not this call
+    # found MLflow installed, so its return value is deliberately ignored: it is
+    # already logged, and there is no branch in the pipeline that depends on it.
+    tracing.configure(
+        settings,
+        extra_defaults={
+            "environment": settings.environment,
+            "methodology_version": METHODOLOGY_VERSION,
+            "command": args.command,
+            **prompt_identity(),
+        },
+    )
 
     started = datetime.now()
     try:

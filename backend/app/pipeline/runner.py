@@ -65,6 +65,7 @@ from app.models import (
     PipelineRun,
     WeatherObservation,
 )
+from app.observability import tracing
 from app.providers import (
     ProviderBudgetExhausted,
     ProviderError,
@@ -179,6 +180,75 @@ class RunReport:
         )
 
 
+def _candidate_for_trace(candidate: AnomalyCandidate) -> dict:
+    """One scored candidate, with the arithmetic that produced its rank.
+
+    Deliberately the whole chain — tail probability, surprisal, margin bonus,
+    score — rather than the score alone, because the score on its own cannot be
+    checked and this is the number the evaluation suite recomputes independently.
+    """
+    return {
+        "city_id": candidate.city_id,
+        "metric": candidate.metric,
+        "direction": candidate.direction,
+        "observed_value": candidate.observed_value,
+        "unit": candidate.unit,
+        "baseline_median": candidate.baseline_median,
+        "baseline_n": candidate.baseline_n,
+        "percentile": candidate.percentile,
+        "tail_probability": candidate.tail_probability,
+        "tail_probability_is_bounded": candidate.tail_probability_is_bounded,
+        "beyond_baseline_sample": candidate.beyond_baseline_sample,
+        "z_score": candidate.z_score,
+        "z_valid": candidate.z_valid,
+        "surprisal": candidate.surprisal,
+        "margin_bonus": candidate.margin_bonus,
+        "anomaly_score": candidate.anomaly_score,
+        "eligible": candidate.eligible,
+        "excluded_reason": candidate.excluded_reason,
+    }
+
+
+def _report_for_trace(report: RunReport) -> dict:
+    """A run report as span output, per-city detail included.
+
+    The per-city list is the useful half: a run whose completeness came in at 0.78
+    is only debuggable if the trace says *which* cities were missing and why, and
+    "22 of 50" does not.
+    """
+    return {
+        "run_id": report.run_id,
+        "kind": report.kind,
+        "status": report.status,
+        "published": report.published,
+        "analysis_date": report.analysis_date.isoformat() if report.analysis_date else None,
+        "data_tier": report.data_tier,
+        "completeness": report.completeness,
+        "events_total": report.events_total,
+        "events_published": report.events_published,
+        "events_excluded": report.events_excluded,
+        "provider_requests": report.provider_requests,
+        "provider_errors": report.provider_errors,
+        "llm_calls": report.llm_calls,
+        "llm_generated": report.llm_generated,
+        "template_generated": report.template_generated,
+        "llm_estimated_usd": report.llm_estimated_usd,
+        "error": report.error,
+        "cities": [
+            {
+                "city_id": o.city_id,
+                "fetched": o.fetched,
+                "quality": o.quality,
+                "missing_fields": o.missing_fields,
+                "baselines_found": o.baselines_found,
+                "candidates": o.candidates,
+                "error": o.error,
+            }
+            for o in report.city_outcomes
+        ],
+    }
+
+
 # ---------------------------------------------------------------------------
 # Date resolution
 # ---------------------------------------------------------------------------
@@ -258,7 +328,77 @@ class Pipeline:
         skip_explanations: bool = False,
         now_utc: datetime | None = None,
     ) -> RunReport:
-        """Analyse one date and publish it, or fail without publishing anything."""
+        """Analyse one date and publish it, or fail without publishing anything.
+
+        The root trace span lives here rather than inside ``_run_daily`` for one
+        reason: this method deliberately does not raise, so the span's status has
+        to be read off the returned report. A span that only recorded thrown
+        exceptions would mark every failed run as a success.
+        """
+        with tracing.span(
+            "pipeline.run_daily",
+            span_type=tracing.SPAN_CHAIN,
+            root=True,
+            kind=kind.value,
+            requested_date=analysis_date.isoformat() if analysis_date else None,
+            weather_provider=self.settings.weather_provider,
+            llm_provider=self.settings.llm_provider,
+            methodology_version=METHODOLOGY_VERSION,
+        ) as sp:
+            sp.set_inputs(
+                {
+                    "requested_date": analysis_date.isoformat() if analysis_date else None,
+                    "kind": kind.value,
+                    "force_tier": force_tier.value if force_tier else None,
+                    "skip_explanations": skip_explanations,
+                }
+            )
+            report = self._run_daily(
+                analysis_date,
+                kind=kind,
+                force_tier=force_tier,
+                skip_explanations=skip_explanations,
+                now_utc=now_utc,
+            )
+            sp.set_outputs(_report_for_trace(report))
+            sp.set(
+                status="OK" if report.status == RunStatus.SUCCEEDED.value else "ERROR",
+                run_id=report.run_id,
+                run_status=report.status,
+                analysis_date=(
+                    report.analysis_date.isoformat() if report.analysis_date else None
+                ),
+                data_tier=report.data_tier,
+                published=report.published,
+                cities_total=report.cities_total,
+                cities_with_data=report.cities_with_data,
+                completeness=round(report.completeness, 4),
+                events_total=report.events_total,
+                events_published=report.events_published,
+                provider_requests=report.provider_requests,
+                provider_errors=report.provider_errors,
+                llm_calls=report.llm_calls,
+                llm_estimated_usd=report.llm_estimated_usd,
+                duration_ms=report.duration_ms,
+                error_message=report.error,
+            )
+        # Outside the span deliberately. Flushing the async export queue can take
+        # a couple of seconds, and inside the `with` that time lands in the root
+        # span's own latency — which then reads as a slow pipeline rather than a
+        # slow telemetry flush. The first version of this reported 2,468 ms for a
+        # run that took 204 ms.
+        tracing.flush()
+        return report
+
+    def _run_daily(
+        self,
+        analysis_date: date | None = None,
+        *,
+        kind: RunKind = RunKind.DAILY,
+        force_tier: DataTier | None = None,
+        skip_explanations: bool = False,
+        now_utc: datetime | None = None,
+    ) -> RunReport:
         started = time.perf_counter()
         now_utc = now_utc or datetime.now(UTC)
         run = self._open_run(kind)
@@ -295,14 +435,119 @@ class Pipeline:
                 tier.value,
             )
 
-            outcomes = self._fetch(cities, analysis_date, tier, report, now_utc=now_utc)
-            self._require_completeness(report, len(cities))
-            candidates = self._compute(cities, analysis_date, outcomes, report)
-            ranked = self._rank(candidates, report)
+            # Each stage is spanned at its call site rather than inside its own
+            # method, because the figure worth recording is almost always the one
+            # the stage wrote into `report`, and that is readable from here
+            # without threading a span handle through five signatures.
+            with tracing.span(
+                "fetch_observations",
+                span_type=tracing.SPAN_RETRIEVER,
+                provider=self.settings.weather_provider,
+                analysis_date=analysis_date.isoformat(),
+                data_tier=tier.value,
+                city_count=len(cities),
+            ) as sp:
+                sp.set_inputs(
+                    {
+                        "analysis_date": analysis_date.isoformat(),
+                        "data_tier": tier.value,
+                        "city_ids": [c.id for c in cities],
+                    }
+                )
+                outcomes = self._fetch(
+                    cities, analysis_date, tier, report, now_utc=now_utc
+                )
+                sp.set_outputs(
+                    {
+                        "cities": [
+                            {
+                                "city_id": o.city_id,
+                                "fetched": o.fetched,
+                                "quality": o.quality,
+                                "missing_fields": o.missing_fields,
+                                "error": o.error,
+                            }
+                            for o in outcomes.values()
+                        ]
+                    }
+                )
+                sp.set(
+                    cities_with_data=report.cities_with_data,
+                    completeness=round(report.completeness, 4),
+                    provider_requests=report.provider_requests,
+                    provider_errors=report.provider_errors,
+                )
+
+            # Spanned separately from the fetch so that a day rejected for thin
+            # coverage is visibly a *gate* failing, not a provider failing.
+            with tracing.span(
+                "require_completeness",
+                span_type=tracing.SPAN_PARSER,
+                completeness=round(report.completeness, 4),
+                minimum_completeness=self.settings.pipeline_min_city_completeness,
+                cities_missing=report.cities_total - report.cities_with_data,
+            ):
+                self._require_completeness(report, len(cities))
+
+            with tracing.span(
+                "score_anomalies",
+                span_type=tracing.SPAN_CHAIN,
+                analysis_date=analysis_date.isoformat(),
+                city_count=len(cities),
+                reference_period=self.settings.reference_period_label,
+                seasonal_window_days=self.settings.baseline_seasonal_window_days,
+            ) as sp:
+                candidates = self._compute(cities, analysis_date, outcomes, report)
+                sp.set_outputs({"candidates": [_candidate_for_trace(c) for c in candidates]})
+                sp.set(
+                    candidates=report.events_total,
+                    candidates_ineligible=report.events_excluded,
+                )
+
+            with tracing.span(
+                "rank_events",
+                span_type=tracing.SPAN_CHAIN,
+                top_n=self.settings.ranking_top_n,
+                one_event_per_city=self.settings.ranking_one_event_per_city,
+                min_score=self.settings.ranking_min_score,
+                eligible=report.events_total - report.events_excluded,
+            ) as sp:
+                ranked = self._rank(candidates, report)
+                sp.set_outputs(
+                    {
+                        "board": [
+                            {"rank": entry.rank, **_candidate_for_trace(entry.candidate)}
+                            for entry in ranked.ranked
+                        ],
+                        "diagnostics": ranked.diagnostics,
+                    }
+                )
+                sp.set(
+                    events_published=report.events_published,
+                    top_score=(
+                        round(ranked.ranked[0].candidate.anomaly_score, 4)
+                        if ranked.ranked
+                        else None
+                    ),
+                )
+
             self._persist_events(run, candidates, ranked, analysis_date, report)
 
             if not skip_explanations:
-                self._explain(run, ranked, report)
+                with tracing.span(
+                    "explain_events",
+                    span_type=tracing.SPAN_CHAIN,
+                    llm_provider=self.settings.llm_provider,
+                    event_count=len(ranked.ranked),
+                ) as sp:
+                    self._explain(run, ranked, report)
+                    sp.set(
+                        llm_calls=report.llm_calls,
+                        llm_generated=report.llm_generated,
+                        template_generated=report.template_generated,
+                        llm_estimated_usd=report.llm_estimated_usd,
+                        llm_budget_exhausted=report.llm_budget_exhausted,
+                    )
 
             self._publish(run, analysis_date, ranked, report, started)
             return report
@@ -326,6 +571,35 @@ class Pipeline:
         accidentally re-download thirty years of history for fifty cities is a
         daily job that will eventually do it.
         """
+        with tracing.span(
+            "pipeline.build_baselines",
+            span_type=tracing.SPAN_CHAIN,
+            root=True,
+            provider=self.settings.weather_provider,
+            reference_period=self.settings.reference_period_label,
+            requested_cities=len(city_ids) if city_ids else None,
+            force=force,
+        ) as sp:
+            sp.set_inputs({"city_ids": city_ids, "force": force})
+            report = self._build_baselines(city_ids=city_ids, force=force)
+            sp.set_outputs(_report_for_trace(report))
+            sp.set(
+                status="OK" if report.status == RunStatus.SUCCEEDED.value else "ERROR",
+                run_id=report.run_id,
+                run_status=report.status,
+                cities_total=report.cities_total,
+                cities_built=report.cities_with_data,
+                provider_requests=report.provider_requests,
+                provider_errors=report.provider_errors,
+                duration_ms=report.duration_ms,
+                error_message=report.error,
+            )
+        tracing.flush()  # outside the span — see the note in run_daily
+        return report
+
+    def _build_baselines(
+        self, *, city_ids: list[str] | None = None, force: bool = False
+    ) -> RunReport:
         started = time.perf_counter()
         run = self._open_run(RunKind.BASELINES)
         report = RunReport(
@@ -348,9 +622,23 @@ class Pipeline:
             report.cities_total = len(cities)
             for city in cities:
                 try:
-                    stats = build_city_baselines(
-                        self.session, city, self.provider, self.settings, force=force
-                    )
+                    with tracing.span(
+                        "build_city_baseline",
+                        span_type=tracing.SPAN_RETRIEVER,
+                        city_id=city.id,
+                        reference_period=self.settings.reference_period_label,
+                        force=force,
+                    ) as sp:
+                        stats = build_city_baselines(
+                            self.session, city, self.provider, self.settings, force=force
+                        )
+                        sp.set_outputs(dict(stats))
+                        sp.set(
+                            skipped=bool(stats.get("skipped")),
+                            rows=int(stats.get("rows", 0)),
+                            days_fetched=int(stats.get("days_fetched", 0)),
+                            provider_requests=int(stats.get("provider_requests", 0)),
+                        )
                 except ProviderBudgetExhausted as exc:
                     # Not this city's failure — the whole free-tier window is
                     # spent, so every remaining city would fail identically.

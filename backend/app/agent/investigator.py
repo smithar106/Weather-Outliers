@@ -23,11 +23,13 @@ Bounds, all configurable:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import time
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
+from typing import Final
 
 from pydantic import ValidationError
 from sqlalchemy import func, select
@@ -57,6 +59,7 @@ from app.agent.tools import TOOL_SPECS, AgentToolkit
 from app.config import Settings, get_settings
 from app.domain import METRIC_LABELS, Generator, Metric
 from app.models import AnomalyEvent, City, PipelineRun
+from app.observability import tracing
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +103,50 @@ Plain, specific, unhurried. A curious reader with no statistics background shoul
 understand why this reading is surprising. No hype, no adjectives doing work that the \
 numbers should do. Name the city in the headline.
 """
+
+#: Hand-maintained label for the prompt above. Bump it when the prompt changes in
+#: a way that could change what the model writes, so a trace or an evaluation
+#: report can say which prompt produced a result.
+PROMPT_VERSION: Final[str] = "1.0.0"
+
+#: First twelve hex characters of the SHA-256 of :data:`SYSTEM_PROMPT`, computed at
+#: import. Recorded alongside ``PROMPT_VERSION`` because a hand-maintained version
+#: silently stops being true the moment someone edits the prompt without bumping
+#: it — and a comparison of two runs that share a version but not a digest is a
+#: comparison of two different prompts. The digest is derived, never asserted, so
+#: it cannot itself drift.
+PROMPT_SHA256: Final[str] = hashlib.sha256(SYSTEM_PROMPT.encode("utf-8")).hexdigest()[:12]
+
+
+def prompt_identity() -> dict[str, str]:
+    """The prompt's identity, for traces and evaluation reports."""
+    return {"prompt_version": PROMPT_VERSION, "prompt_sha256": PROMPT_SHA256}
+
+
+def _turns_for_trace(turns: list[Turn]) -> list[dict]:
+    """The conversation so far, in a shape a trace viewer can read.
+
+    Full content rather than counts, and the tool *results* in particular: those
+    are the numbers the grounding guard will hold the model to, so a trace without
+    them cannot answer the only question worth asking about a rejected
+    explanation — where the figure came from. Nothing here is sensitive; every
+    value is a public weather statistic this project publishes anyway.
+    """
+    return [
+        {
+            "role": turn.role,
+            "text": turn.text,
+            "tool_calls": [
+                {"name": call.name, "arguments": call.arguments}
+                for call in turn.tool_calls
+            ],
+            "tool_results": [
+                {"name": result.name, "content": result.content}
+                for result in turn.tool_results
+            ],
+        }
+        for turn in turns
+    ]
 
 
 SUBMIT_TOOL_SPEC = {
@@ -197,7 +244,63 @@ class Investigator:
     def investigate(
         self, event: AnomalyEvent, city: City, *, rank: int | None = None
     ) -> InvestigationOutcome:
-        """Produce a verified explanation for one event. Never raises."""
+        """Produce a verified explanation for one event. Never raises.
+
+        The span wraps the whole attempt rather than only the model call, because
+        the interesting outcome of this method is often that no model call was
+        made at all — no key, budget spent, deadline blown — and a trace that only
+        covered the happy path would be silent about exactly those cases.
+        """
+        with tracing.span(
+            "explain_event",
+            span_type=tracing.SPAN_AGENT,
+            event_id=event.id,
+            city_id=event.city_id,
+            metric=event.metric,
+            rank=rank,
+            llm_provider=self.settings.llm_provider,
+            model=getattr(self.client, "model", None),
+            **prompt_identity(),
+        ) as sp:
+            sp.set_inputs(
+                {
+                    "event_id": event.id,
+                    "city": city.name,
+                    "metric": event.metric,
+                    "observed_value": event.observed_value,
+                    "unit": event.unit,
+                    "rank": rank,
+                }
+            )
+            outcome = self._investigate(event, city, rank=rank)
+            sp.set_outputs(
+                {
+                    "generator": outcome.generator,
+                    "headline": outcome.explanation.headline,
+                    "statistical_explanation": outcome.explanation.statistical_explanation,
+                    "historical_context": outcome.explanation.historical_context,
+                    "caveats": outcome.explanation.caveats,
+                    "confidence": outcome.explanation.confidence,
+                    "fallback_reason": outcome.fallback_reason,
+                }
+            )
+            sp.set(
+                generator=outcome.generator,
+                attempts=outcome.attempts,
+                tool_call_count=outcome.tool_call_count,
+                prompt_tokens=outcome.prompt_tokens,
+                completion_tokens=outcome.completion_tokens,
+                estimated_usd=outcome.estimated_usd,
+                agent_latency_ms=outcome.latency_ms,
+                fallback_reason=outcome.fallback_reason,
+                validation_ok=outcome.validation.get("ok"),
+                validation_stage=outcome.validation.get("stage"),
+            )
+            return outcome
+
+    def _investigate(
+        self, event: AnomalyEvent, city: City, *, rank: int | None = None
+    ) -> InvestigationOutcome:
         template = render_template(template_input_from_event(event, city))
 
         if self.client is None:
@@ -251,12 +354,48 @@ class Investigator:
                 break
 
             try:
-                response = self.client.complete(  # type: ignore[union-attr]
-                    system=SYSTEM_PROMPT,
-                    turns=turns,
-                    tools=self.tools,
-                    max_tokens=self.settings.agent_max_output_tokens,
-                )
+                # The span is inside the try so that a transport failure is
+                # recorded as an errored span and *then* handled by the retry
+                # logic below, rather than the retry hiding it from the trace.
+                # No prompt or completion text is attached: the span carries
+                # identity and shape, and the text itself is the part most likely
+                # to contain something that should not leave the process.
+                with tracing.span(
+                    "llm_completion",
+                    span_type=tracing.SPAN_LLM,
+                    llm_provider=self.settings.llm_provider,
+                    model=model_name,
+                    iteration=attempts + 1,
+                    turn_count=len(turns),
+                    max_output_tokens=self.settings.agent_max_output_tokens,
+                    **prompt_identity(),
+                ) as llm_span:
+                    llm_span.set_inputs(
+                        {"system": SYSTEM_PROMPT, "turns": _turns_for_trace(turns)}
+                    )
+                    response = self.client.complete(  # type: ignore[union-attr]
+                        system=SYSTEM_PROMPT,
+                        turns=turns,
+                        tools=self.tools,
+                        max_tokens=self.settings.agent_max_output_tokens,
+                    )
+                    llm_span.set_outputs(
+                        {
+                            "text": response.text,
+                            "tool_calls": [
+                                {"name": c.name, "arguments": c.arguments}
+                                for c in response.tool_calls
+                            ],
+                        }
+                    )
+                    llm_span.set(
+                        model=response.model,
+                        prompt_tokens=response.prompt_tokens,
+                        completion_tokens=response.completion_tokens,
+                        stop_reason=response.stop_reason,
+                        tool_call_count=len(response.tool_calls),
+                        submitted=response.submission is not None,
+                    )
             except LLMUnavailable as exc:
                 transport_retries += 1
                 if transport_retries > self.settings.agent_max_retries:
@@ -408,7 +547,42 @@ class Investigator:
         city: City,
         toolkit: AgentToolkit,
     ) -> tuple[EventExplanation | None, dict]:
-        """Schema validation, then grounding. Both must pass."""
+        """Schema validation, then grounding. Both must pass.
+
+        Traced separately from the model call because a rejection here is the
+        single most useful thing to be able to count: it is the guard doing its
+        job, and its rate is what tells an operator whether a model change made
+        the output less grounded.
+        """
+        with tracing.span(
+            "validate_explanation",
+            span_type=tracing.SPAN_PARSER,
+            event_id=event.id,
+            city_id=event.city_id,
+        ) as sp:
+            sp.set_inputs({"submission": submission.arguments})
+            explanation, payload = self._validate_uninstrumented(
+                submission, event, city, toolkit
+            )
+            sp.set_outputs(payload)
+            sp.set(
+                ok=bool(payload.get("ok")),
+                stage=payload.get("stage"),
+                violation_count=len(payload.get("violations") or ()),
+                # The violation *codes* are safe to record: they are a fixed
+                # vocabulary (``ungrounded_number``, ``unsupported_record_claim``
+                # …), not excerpts of model output.
+                violations=list(payload.get("violations") or ())[:8],
+            )
+            return explanation, payload
+
+    def _validate_uninstrumented(
+        self,
+        submission: ToolCall,
+        event: AnomalyEvent,
+        city: City,
+        toolkit: AgentToolkit,
+    ) -> tuple[EventExplanation | None, dict]:
         try:
             explanation = EventExplanation.model_validate(submission.arguments)
         except ValidationError as exc:
