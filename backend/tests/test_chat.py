@@ -101,23 +101,38 @@ def test_parse_plan_tolerates_garbage():
 
 
 class _FakeClient:
-    def __init__(self, text: str) -> None:
-        self._text = text
+    def __init__(self, *responses: str) -> None:
+        self._responses = list(responses)
 
     def complete(self, *, system, turns, tools, max_tokens):
-        return SimpleNamespace(text=self._text)
+        text = self._responses.pop(0) if self._responses else ""
+        return SimpleNamespace(text=text)
 
 
 def test_answer_question_returns_executed_rows(session):
-    client = _FakeClient(
-        '{"sql": "SELECT 1 AS n", "answer": "the answer", "explanation": "why"}'
-    )
+    client = _FakeClient('{"sql": "SELECT 1 AS n", "explanation": "why"}', "The answer is one.")
     result = answer_question("q?", client=client, session=session, max_rows=100)
     assert result.refused is False
     assert result.sql == "SELECT 1 AS n"
     assert result.columns == ("n",)
     assert result.rows == ((1,),)
-    assert result.answer == "the answer"
+    assert result.answer == "The answer is one."
+
+
+def test_answer_question_grounds_answer_in_rows(session):
+    client = _FakeClient(
+        '{"sql": "SELECT 1 AS n", "explanation": "why"}',
+        "The most unusual event is Mexico City with a score of 2.77.",
+    )
+    result = answer_question("most unusual?", client=client, session=session, max_rows=100)
+    assert result.answer == "The most unusual event is Mexico City with a score of 2.77."
+
+
+def test_answer_question_empty_result_needs_no_model(session):
+    client = _FakeClient('{"sql": "SELECT 1 AS n WHERE 1 = 0", "explanation": "why"}')
+    result = answer_question("q?", client=client, session=session, max_rows=100)
+    assert result.refused is False
+    assert result.answer == "No matching records were found for that question."
 
 
 def test_answer_question_refuses_when_model_refuses(session):
@@ -129,7 +144,7 @@ def test_answer_question_refuses_when_model_refuses(session):
 
 
 def test_answer_question_rejects_writing_sql(session):
-    client = _FakeClient('{"sql": "DELETE FROM cities", "answer": "nope"}')
+    client = _FakeClient('{"sql": "DELETE FROM cities", "explanation": "nope"}')
     result = answer_question("q?", client=client, session=session, max_rows=100)
     assert result.refused is True
     assert "rejected" in result.answer
@@ -167,10 +182,14 @@ def test_chat_happy_path(monkeypatch, client, test_settings):
     class FakeClient:
         model = "test-model"
 
+        def __init__(self):
+            self._responses = [
+                '{"sql": "SELECT 1 AS n", "explanation": "constant"}',
+                "One row.",
+            ]
+
         def complete(self, *, system, turns, tools, max_tokens):
-            return SimpleNamespace(
-                text='{"sql": "SELECT 1 AS n", "answer": "one row", "explanation": "constant"}'
-            )
+            return SimpleNamespace(text=self._responses.pop(0))
 
         def close(self):
             pass

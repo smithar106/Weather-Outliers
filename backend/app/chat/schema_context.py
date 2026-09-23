@@ -85,8 +85,12 @@ RULES = """\
 Respond with ONE JSON object and nothing else (no markdown fences). Use exactly
 one of these two shapes:
 
-  {"sql": "<query>", "answer": "<short plain answer>", "explanation": "<why>"}
+  {"sql": "<query>", "explanation": "<what the query does and why>"}
   {"error": "cannot_answer", "answer": "<why not>", "explanation": ""}
+
+You write only the query here. The answer is composed later, from the query's
+actual results, so do not try to state the result's numbers — you do not have
+them yet. Order results so the most relevant row comes first.
 
 Hard rules for the SQL you produce:
 - A single SELECT statement. No WITH, no subquery that writes, no trailing

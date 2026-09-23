@@ -1,9 +1,18 @@
-"""The chat agent: one question in, one query + answer out.
+"""The chat agent: question → read-only query → answer grounded in the result.
 
-The model is asked for *both* the SQL and a plain-language answer, but the
-answer rows returned to the caller come from the executor, not from the model —
-so a number the model made up cannot survive the round trip. A question the
-schema cannot answer becomes an explicit refusal rather than a fabricated query.
+The model is called twice, deliberately:
+
+1. **Plan** — the model writes a single read-only SELECT (plus a short note on
+   what it does). It is *not* asked for the answer here, because the results do
+   not exist yet and anything it said would be a prediction, not an answer.
+
+2. **Answer** — after the query runs, the actual rows are fed back and the model
+   states the specific result: the names, numbers and dates, read off the rows.
+
+Splitting it this way is what stops the answer from becoming a sentence that
+describes how to read the table ("see the row with the highest score") instead of
+the answer itself ("Mexico City's mean temperature, at 2.77"). A refusal, or a
+query that the validator rejects, returns without ever inventing a figure.
 """
 
 from __future__ import annotations
@@ -20,6 +29,7 @@ from app.chat.schema_context import build_system_prompt
 from app.chat.sql import SqlRejected, execute_query
 
 _MAX_OUTPUT_TOKENS = 800
+_ANSWER_PREVIEW_ROWS = 20
 
 
 @dataclass(frozen=True)
@@ -57,9 +67,10 @@ def answer_question(question: str, *, client: Any, session: Session, max_rows: i
             refused=True,
         )
 
+    answer = _compose_answer(question, columns, rows, truncated, client)
     return ChatResult(
         question=question,
-        answer=plan.get("answer") or "",
+        answer=answer,
         explanation=plan.get("explanation"),
         sql=sql,
         columns=tuple(columns),
@@ -77,6 +88,47 @@ def _plan(question: str, client: Any) -> dict[str, Any]:
         max_tokens=_MAX_OUTPUT_TOKENS,
     )
     return _parse_plan(getattr(response, "text", None))
+
+
+def _compose_answer(
+    question: str,
+    columns: list[str],
+    rows: list[list],
+    truncated: bool,
+    client: Any,
+) -> str:
+    """State the answer from the query's actual results, never a description of it."""
+    if not rows:
+        return "No matching records were found for that question."
+
+    preview = [list(row) for row in rows[:_ANSWER_PREVIEW_ROWS]]
+    payload = json.dumps({"columns": columns, "rows": preview}, default=str)
+
+    system = (
+        "You are a data analyst answering a question using the query results provided. "
+        "State the specific answer — the actual names, numbers and dates — directly, in a "
+        "few plain sentences. Do not describe how to read the table and do not tell the "
+        "reader to look at a row; say what the result is. Never invent a value that is "
+        "not in the results."
+    )
+    user = f"Question: {question}\n\nQuery results:\n{payload}"
+    if truncated:
+        user += "\n\nThe result was truncated to a preview; more rows exist than are shown."
+
+    response = client.complete(
+        system=system,
+        turns=[Turn(role="user", text=user)],
+        tools=[],
+        max_tokens=500,
+    )
+    text = (getattr(response, "text", None) or "").strip()
+    if text:
+        return text
+
+    if len(rows) == 1:
+        parts = [f"{column} = {rows[0][index]}" for index, column in enumerate(columns)]
+        return "The result is " + ", ".join(parts) + "."
+    return f"The query returned {len(rows)} rows."
 
 
 def _parse_plan(text: str | None) -> dict[str, Any]:
