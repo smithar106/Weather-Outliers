@@ -278,7 +278,7 @@ function SuitePanel({ suite }: { suite: EvalSuite }) {
         <div className="mt-6 space-y-3">
           {failures.map((one) => (
             <Callout key={one.id} tone="danger" title={one.title}>
-              <p className="tnum">
+              <p className="tnum [overflow-wrap:anywhere]">
                 Expected {one.expected} · observed {one.observed}
               </p>
               {one.detail && <p className="mt-1 text-paper-faint">{one.detail}</p>}
@@ -305,7 +305,10 @@ function SuitePanel({ suite }: { suite: EvalSuite }) {
           <div className="mt-4 space-y-5">
             {[...byCategory.entries()].map(([category, cases]) => (
               <div key={category}>
-                <p className="eyebrow">
+                {/* Category keys that have no label above fall back to their raw
+                    form, e.g. `representative/interpolated-interior`, which is
+                    wider than a 320px screen and has no space to break on. */}
+                <p className="eyebrow [overflow-wrap:anywhere]">
                   {categoryLabel(category)} · {cases.filter((one) => one.passed).length}/
                   {cases.length}
                 </p>
@@ -318,7 +321,15 @@ function SuitePanel({ suite }: { suite: EvalSuite }) {
                           one.passed ? "bg-positive" : "bg-negative"
                         }`}
                       />
-                      <span className="min-w-0 flex-1">
+                      {/*
+                       * `overflow-wrap: anywhere` rather than `break-words`: these
+                       * strings are assertions like
+                       * `GET /api/events/not-an-event → 404` and
+                       * `result_type=statistical_outliers`, which contain no space
+                       * for the browser to break on, so `break-word` leaves them
+                       * overflowing the row on a narrow screen.
+                       */}
+                      <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
                         <span className="block text-sm text-paper-dim">{one.title}</span>
                         <span className="tnum block text-xs text-paper-faint">
                           expected {one.expected} · observed {one.observed}

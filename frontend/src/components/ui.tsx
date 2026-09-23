@@ -164,7 +164,19 @@ export function DefRow({
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-ink-800 py-2.5 last:border-0">
       <dt className="text-sm text-paper-muted">{term}</dt>
-      <dd className={`text-sm text-paper-dim ${mono ? "tnum" : ""}`}>{children}</dd>
+      {/*
+       * `mono` rows carry values the provider chose, not values we wrote:
+       * `open_meteo_best_match_analysis`, `era5_seasonal_window`. They contain
+       * no space to break on, so without `overflow-wrap: anywhere` they run
+       * past the card edge on a narrow phone instead of wrapping.
+       */}
+      <dd
+        className={`min-w-0 text-sm text-paper-dim ${
+          mono ? "tnum [overflow-wrap:anywhere]" : ""
+        }`}
+      >
+        {children}
+      </dd>
     </div>
   );
 }

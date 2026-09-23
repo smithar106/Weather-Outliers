@@ -105,8 +105,22 @@ export function TrendChart({
   const yTicks = [yMin, yMin + ySpan / 2, yMax];
   const showPoints = sorted.length <= 60;
 
+  /*
+   * Axis labels are HTML positioned over the plot, not `<text>` inside the SVG.
+   *
+   * The SVG scales to its container, so anything measured in user units scales
+   * with it — a 10px label rendered at 16px in a 1140px-wide card and at 4px in a
+   * 272px-wide one, which is illegible on a phone. HTML text is immune: it is
+   * 11px at every width. The trade is that positions have to be expressed as
+   * percentages of the plot box rather than in user units, hence the helpers
+   * below. `ScoreBreakdown` already labels itself this way.
+   */
+  const leftPct = (value: number) => `${(value / WIDTH) * 100}%`;
+  const topPct = (value: number) => `${(value / HEIGHT) * 100}%`;
+
   return (
     <figure>
+      <div className="relative">
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="h-auto w-full"
@@ -125,9 +139,6 @@ export function TrendChart({
               stroke="var(--color-ink-700)"
               strokeWidth="1"
             />
-            <text x={PAD.left - 8} y={y(tick) + 3} textAnchor="end" className="fill-paper-faint text-[10px]">
-              {formatNumber(tick, ySpan < 5 ? 1 : 0)}
-            </text>
           </g>
         ))}
 
@@ -163,20 +174,43 @@ export function TrendChart({
           </g>
         ))}
 
-        <text x={PAD.left} y={HEIGHT - 10} className="fill-paper-faint text-[10px]">
-          {formatLocalDate(sorted[0].local_date, "short")}
-        </text>
-        {sorted.length > 1 && (
-          <text
-            x={WIDTH - PAD.right}
-            y={HEIGHT - 10}
-            textAnchor="end"
-            className="fill-paper-faint text-[10px]"
-          >
-            {formatLocalDate(sorted[sorted.length - 1].local_date, "short")}
-          </text>
-        )}
       </svg>
+
+      {/*
+       * Anchored by `right`, not by `left` plus a width: the gutter is 44 user
+       * units, which is 70px in a desktop card but only 14px in a 272px-wide one,
+       * so a fixed-width box cuts "342" in half on a phone. Anchoring the right
+       * edge lets the box size to its own text and grow leftwards into the card's
+       * padding instead.
+       */}
+      {yTicks.map((tick, index) => (
+        <span
+          key={`y-${index}`}
+          aria-hidden="true"
+          className="tnum absolute -translate-y-1/2 whitespace-nowrap text-right text-[11px] leading-none text-paper-faint"
+          style={{ top: topPct(y(tick)), right: leftPct(WIDTH - (PAD.left - 8)) }}
+        >
+          {formatNumber(tick, ySpan < 5 ? 1 : 0)}
+        </span>
+      ))}
+
+      <span
+        aria-hidden="true"
+        className="tnum absolute text-[11px] leading-none text-paper-faint"
+        style={{ top: topPct(HEIGHT - 16), left: leftPct(PAD.left) }}
+      >
+        {formatLocalDate(sorted[0].local_date, "short")}
+      </span>
+      {sorted.length > 1 && (
+        <span
+          aria-hidden="true"
+          className="tnum absolute text-[11px] leading-none text-paper-faint"
+          style={{ top: topPct(HEIGHT - 16), right: leftPct(PAD.right) }}
+        >
+          {formatLocalDate(sorted[sorted.length - 1].local_date, "short")}
+        </span>
+      )}
+      </div>
 
       <figcaption className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-paper-faint">
         {series.map((spec) => (

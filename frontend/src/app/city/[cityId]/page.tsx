@@ -582,7 +582,14 @@ function BaselineCard({ baseline }: { baseline: Baseline }) {
 function Figure({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
     <div>
-      <dt className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-paper-faint">
+      {/*
+       * The label steps down below `sm`. "Interquartile range" is the longest of
+       * these, and at 11px with 0.1em tracking its first word alone measures
+       * ~109px — wider than the 104px column this two-column grid leaves on a
+       * 320px screen. It is a single word, so no wrap can rescue it; the tracking
+       * and size have to give instead.
+       */}
+      <dt className="text-[0.625rem] font-semibold uppercase tracking-[0.07em] text-paper-faint sm:text-[0.6875rem] sm:tracking-[0.1em]">
         {label}
       </dt>
       <dd className="tnum mt-1.5 text-base text-paper-dim">{value}</dd>

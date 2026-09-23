@@ -64,8 +64,17 @@ export function DistributionChart({
 
   const ticks = [xMin, xMin + span / 2, xMax];
 
+  /*
+   * Axis labels are HTML over the plot rather than `<text>` inside it, for the
+   * reason documented in TrendChart: SVG user units scale with the container, so
+   * a 10px label renders around 4px once the card is phone-width. See that file.
+   */
+  const leftPct = (value: number) => `${(value / WIDTH) * 100}%`;
+  const topPct = (value: number) => `${(value / HEIGHT) * 100}%`;
+
   return (
     <figure>
+      <div className="relative">
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="h-auto w-full"
@@ -129,26 +138,46 @@ export function DistributionChart({
           </g>
         )}
 
-        {/* Y axis: 0 and the peak count only. More would be clutter. */}
-        <text x={PAD.left - 8} y={PAD.top + plotHeight} textAnchor="end" className="fill-paper-faint text-[10px]">
-          0
-        </text>
-        <text x={PAD.left - 8} y={PAD.top + 8} textAnchor="end" className="fill-paper-faint text-[10px]">
-          {maxCount}
-        </text>
+      </svg>
 
-        {ticks.map((value, index) => (
-          <text
+      {/* Y axis: 0 and the peak count only. More would be clutter. Anchored by
+          `right` for the reason given in TrendChart — the gutter is ~14px wide on
+          a phone, too narrow to hold a three-digit count. */}
+      {[
+        { value: 0, at: PAD.top + plotHeight },
+        { value: maxCount, at: PAD.top + 4 },
+      ].map(({ value, at }) => (
+        <span
+          key={value}
+          aria-hidden="true"
+          className="tnum absolute -translate-y-1/2 whitespace-nowrap text-right text-[11px] leading-none text-paper-faint"
+          style={{ top: topPct(at), right: leftPct(WIDTH - (PAD.left - 8)) }}
+        >
+          {value}
+        </span>
+      ))}
+
+      {ticks.map((value, index) => {
+        const isFirst = index === 0;
+        const isLast = index === ticks.length - 1;
+        return (
+          <span
             key={index}
-            x={x(value)}
-            y={HEIGHT - 10}
-            textAnchor={index === 0 ? "start" : index === ticks.length - 1 ? "end" : "middle"}
-            className="fill-paper-faint text-[10px]"
+            aria-hidden="true"
+            className={`tnum absolute text-[11px] leading-none text-paper-faint ${
+              isFirst ? "" : isLast ? "" : "-translate-x-1/2"
+            }`}
+            style={
+              isLast
+                ? { top: topPct(HEIGHT - 16), right: leftPct(PAD.right) }
+                : { top: topPct(HEIGHT - 16), left: leftPct(x(value)) }
+            }
           >
             {formatNumber(value, Math.abs(span) < 5 ? 1 : 0)}
-          </text>
-        ))}
-      </svg>
+          </span>
+        );
+      })}
+      </div>
 
       <figcaption className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-paper-faint">
         <span>

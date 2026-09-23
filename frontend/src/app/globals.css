@@ -9,43 +9,52 @@
  */
 
 /*
- * The whole ramp was lifted once the first version proved too dark to read
- * comfortably. Two specific faults drove the numbers below rather than taste:
- * `paper-faint` sat at 3.4:1 against the card surface and is the colour used for
- * the 11px eyebrow labels and figure captions, which is under AA for small text;
- * and `ink-700`, the 1px border on every card, sat under 2:1 against both the
- * page ground and the surface, so a column of ten cards read as one
- * undifferentiated dark field with no edges.
+ * The ramp has been lifted twice. The first pass fixed outright failures; this
+ * one answers a different complaint — that the page still read as too dark even
+ * though every text colour passed AA. Passing AA and looking bright are not the
+ * same thing, and two structural faults were doing the damage rather than the
+ * type ramp alone:
  *
- * Every replacement gains contrast rather than trading it: the surfaces are
- * lighter *and* the type on them is lighter still. The ratios in the comments
- * are computed against `--color-ink-850`, the card surface, which is the
- * strictest of the three grounds a given colour actually sits on.
+ * `ink-850` (the card surface) sat at 1.20:1 against `ink-950` (the page
+ * ground). A ratio that low is below the threshold where an edge is perceptible
+ * at all, so ten cards on a page read as one undifferentiated dark field and the
+ * only thing separating them was a border that was itself under 2:1. And
+ * `ink-700`, that border, missed WCAG 1.4.11's 3:1 floor for the boundary of a
+ * UI component, which is the rule that actually governs a card edge — AA for
+ * text does not cover it.
+ *
+ * So the grounds came up along with the type, and the border came up further
+ * than either. Ratios below are measured against `--color-ink-850`, the card
+ * surface, which is the strictest of the three grounds any of these sit on.
+ * Every text step now clears 7.6:1 against it, where the old floor was 5.7:1.
  */
 @theme {
-  /* Ground */
-  --color-ink-950: #0a1020;
-  --color-ink-900: #111a2e;
-  --color-ink-850: #16223a;
-  --color-ink-800: #1f2e4c;
-  --color-ink-750: #27385c;
-  /* Borders. `ink-700` is the card edge and `ink-600` the emphasised one; both
-     are now visible against the surface instead of merely implied. */
-  --color-ink-700: #3a4d79;
-  --color-ink-600: #506699;
+  /* Ground. Lifted as a set so the surface separates from the page (1.31:1, up
+     from 1.20:1) without flattening the type contrast above it. */
+  --color-ink-950: #0d1526;
+  --color-ink-900: #152341;
+  --color-ink-850: #1c2c4a;
+  --color-ink-800: #2a3d63;
+  --color-ink-750: #344a74;
+  /* Borders. `ink-700` is the card edge, now 3.17:1 against the surface and so
+     past WCAG 1.4.11's 3:1 floor for a UI boundary; `ink-600` is the emphasised
+     edge, and doubles as the histogram bar fill in DistributionChart. */
+  --color-ink-700: #5f78ae;
+  --color-ink-600: #7a93c6;
 
-  /* Type: 14.8:1 · 11.7:1 · 8.3:1 · 5.7:1 — AA or better at every step,
-     including the smallest labels, which use `faint`. */
-  --color-paper: #f4f7fd;
-  --color-paper-dim: #d4deee;
-  --color-paper-muted: #aebcd6;
-  --color-paper-faint: #8b9cba;
+  /* Type: 13.7:1 · 11.9:1 · 9.7:1 · 7.7:1 against the card surface — every step
+     now well clear of AA, including `faint`, which carries the 11px eyebrow
+     labels, figure captions and chart axis labels. */
+  --color-paper: #fbfdff;
+  --color-paper-dim: #e6edfb;
+  --color-paper-muted: #cbd8ee;
+  --color-paper-faint: #b2c1dc;
 
   /* One accent, used for interaction and emphasis only. `accent-dim` is a
      border and underline colour, not a text colour. */
-  --color-accent: #7ec4ff;
-  --color-accent-bright: #bfe2ff;
-  --color-accent-dim: #4a83bd;
+  --color-accent: #9ad3ff;
+  --color-accent-bright: #d8edff;
+  --color-accent-dim: #6099d6;
 
   /* Weather categories. Kept in sync with CATEGORY_STYLES in lib/format.ts. */
   --color-heat: #ff6b4a;
@@ -116,7 +125,9 @@
 
 @layer components {
   .surface {
-    background-color: color-mix(in oklab, var(--color-ink-850) 92%, transparent);
+    /* Nearly opaque. At 92% the card blended far enough toward the page ground to
+       give back much of the surface/ground separation the palette just bought. */
+    background-color: color-mix(in oklab, var(--color-ink-850) 97%, transparent);
     border: 1px solid var(--color-ink-700);
     border-radius: var(--radius-card);
   }
