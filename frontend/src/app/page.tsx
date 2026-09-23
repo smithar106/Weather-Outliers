@@ -250,7 +250,6 @@ function Insight({ rankings }: { rankings: Rankings }) {
   const event = top?.event;
   if (!event?.explanation) return null;
 
-  const isModel = event.explanation.generator === "llm";
   const style = categoryStyle(event.category);
 
   return (
@@ -265,15 +264,6 @@ function Insight({ rankings }: { rankings: Rankings }) {
         </p>
         <p className="mt-3 max-w-3xl text-[0.9375rem] leading-relaxed text-paper-dim">
           {event.explanation.statistical_explanation}
-        </p>
-        <p className="mt-4 text-xs text-paper-faint">
-          {isModel
-            ? `Written by ${event.explanation.llm_provider ?? "a language model"}${
-                event.explanation.model ? ` (${event.explanation.model})` : ""
-              }, grounded in ${event.explanation.tool_call_count} verified tool call${
-                event.explanation.tool_call_count === 1 ? "" : "s"
-              }.`
-            : "Written by the deterministic template, not a language model."}
         </p>
       </div>
     </Section>

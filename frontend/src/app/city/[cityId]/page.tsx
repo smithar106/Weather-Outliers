@@ -485,18 +485,6 @@ function EventPanel({ event, baseline }: { event: AnomalyEvent; baseline: Baseli
             <p>{event.explanation.historical_context}</p>
             <p className="text-paper-faint">{event.explanation.caveats}</p>
           </div>
-          <p className="mt-4 text-xs text-paper-faint">
-            {event.explanation.generator === "llm"
-              ? `Written by ${event.explanation.llm_provider ?? "a language model"}${
-                  event.explanation.model ? ` (${event.explanation.model})` : ""
-                } from ${event.explanation.tool_call_count} tool call${
-                  event.explanation.tool_call_count === 1 ? "" : "s"
-                } against the figures above.`
-              : "Written by the deterministic template, not a language model."}
-            {event.explanation.fallback_reason
-              ? ` Fallback reason: ${event.explanation.fallback_reason}.`
-              : ""}
-          </p>
         </div>
       )}
 

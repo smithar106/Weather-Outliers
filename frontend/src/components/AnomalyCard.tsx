@@ -135,17 +135,6 @@ export function AnomalyCard({ ranked }: { ranked: RankedEvent }) {
               <p className="mt-2.5 text-sm leading-relaxed text-paper-dim">
                 {explanation.statistical_explanation}
               </p>
-              {/*
-               * Only the headline and the statistical paragraph. `historical_context`
-               * restates the same margin the paragraph above already quotes, and ten
-               * cards of four paragraphs each is a wall of text nobody reads — both
-               * it and `caveats` are still rendered in full behind "Full breakdown",
-               * and nothing is dropped from the API. The provenance those caveats
-               * carry stays on this card in the footer (observation type, source
-               * dataset) and in the data-tier badge, so no figure here reads as a
-               * station observation.
-               */}
-              <ExplanationAttribution explanation={explanation} />
             </div>
           )}
 
@@ -187,40 +176,5 @@ function RankMark({ rank, color }: { rank: number; color: string }) {
         className="mt-3 hidden w-px flex-1 bg-gradient-to-b from-ink-700 to-transparent sm:block"
       />
     </div>
-  );
-}
-
-/**
- * Who wrote the prose above.
- *
- * Always shown. A reader must be able to tell a model's sentences from the
- * deterministic template's without guessing, and when a model was intended but
- * unavailable the reason is stated rather than hidden.
- */
-function ExplanationAttribution({
-  explanation,
-}: {
-  explanation: NonNullable<RankedEvent["event"]["explanation"]>;
-}) {
-  const isModel = explanation.generator === "llm";
-  return (
-    <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-ink-800 pt-3 text-[0.6875rem] text-paper-faint">
-      <Badge className={isModel ? "bg-accent/10 text-accent-bright ring-accent-dim/40" : ""}>
-        {isModel ? "AI-written" : "Deterministic template"}
-      </Badge>
-      {isModel ? (
-        <span>
-          {explanation.model ?? "model"} via {explanation.llm_provider ?? "provider"}, grounded in{" "}
-          {explanation.tool_call_count} verified tool {explanation.tool_call_count === 1 ? "call" : "calls"}.
-          Every figure was checked against the values those tools returned.
-        </span>
-      ) : (
-        <span>
-          Generated from the stored calculation without a language model
-          {explanation.fallback_reason ? ` (${explanation.fallback_reason})` : ""}.
-        </span>
-      )}
-      <span>Confidence: {explanation.confidence}.</span>
-    </p>
   );
 }
