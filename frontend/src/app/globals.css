@@ -71,7 +71,10 @@
   --font-display: var(--font-display), Georgia, "Times New Roman", serif;
   --font-mono: var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
 
-  --radius-card: 0.875rem;
+  /* Cards, callouts and buttons all sit on the same radius now — a crisper,
+     more editorial corner than the previous mixed radii, and one step further
+     from the rounded-card SaaS look. */
+  --radius-card: 0.75rem;
 }
 
 @layer base {

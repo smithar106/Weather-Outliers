@@ -59,7 +59,7 @@ export function SectionHeading({
       <div className="max-w-2xl">
         {eyebrow && <p className="eyebrow">{eyebrow}</p>}
         <Heading
-          className={`font-display tracking-tight text-paper ${
+          className={`font-display tracking-tight text-balance text-paper ${
             Heading === "h1" ? "mt-2 text-3xl sm:text-4xl" : "mt-1.5 text-2xl"
           }`}
         >
@@ -102,7 +102,7 @@ export function Badge({
   return (
     <span
       title={title}
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold tracking-wide ring-1 ring-inset ${
+      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[0.6875rem] font-semibold tracking-wide ring-1 ring-inset ${
         className || "bg-ink-800 text-paper-dim ring-ink-700"
       }`}
     >

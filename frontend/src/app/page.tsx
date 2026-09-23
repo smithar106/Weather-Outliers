@@ -163,7 +163,7 @@ function Hero({ rankings }: { rankings: Rankings }) {
           <Badge>1991–2020 baseline</Badge>
         </div>
 
-        <h1 className="mt-6 font-display text-4xl leading-[1.08] tracking-tight text-paper sm:text-[3.25rem]">
+        <h1 className="mt-6 font-display text-4xl leading-[1.08] tracking-tight text-balance text-paper sm:text-[3.25rem]">
           Yesterday was anything but normal.
         </h1>
 
