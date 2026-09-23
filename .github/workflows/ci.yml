@@ -198,6 +198,99 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # The private MLflow tracking server. Not part of the application — nothing in
+      # app/ imports it and the site does not depend on it — but it is deployed from
+      # this repository, so it is built and exercised here rather than trusted.
+      - name: Build the MLflow tracking server image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./ops/mlflow
+          file: ./ops/mlflow/Dockerfile
+          load: true
+          tags: weather-outliers-mlflow:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Both of these are the entrypoint refusing to start, which is the behaviour
+      # that keeps an unauthenticated tracking server off the network. A regression
+      # here looks like a successful deploy, so it is asserted rather than assumed.
+      - name: The MLflow entrypoint refuses to start without a backend store
+        run: |
+          if docker run --rm weather-outliers-mlflow:ci; then
+            echo "started with no backend store configured; it must not"
+            exit 1
+          fi
+
+      - name: The MLflow entrypoint refuses to start without authentication
+        run: |
+          if docker run --rm -e MLFLOW_BACKEND_STORE_URI=sqlite:////tmp/mlflow.db \
+              weather-outliers-mlflow:ci; then
+            echo "started with neither credentials nor MLFLOW_ALLOW_ANONYMOUS; it must not"
+            exit 1
+          fi
+
+      # SQLite rather than PostgreSQL here: what is under test is the entrypoint, the
+      # auth app and the Host allowlist, none of which care which database is behind
+      # them. The server's real deployment uses Postgres — see ops/mlflow/railway.json.
+      - name: The MLflow server enforces auth and answers Railway's Host header
+        run: |
+          set -eu
+          docker run -d --name mlflow -p 5000:5000 \
+            -e MLFLOW_BACKEND_STORE_URI=sqlite:////tmp/mlflow.db \
+            -e MLFLOW_ARTIFACTS_DESTINATION=/tmp/mlartifacts \
+            -e MLFLOW_AUTH_USERNAME=ci \
+            -e MLFLOW_AUTH_PASSWORD=ci-not-a-real-password \
+            weather-outliers-mlflow:ci
+
+          ready=no
+          for i in $(seq 1 60); do
+            if [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5000/health)" = "200" ]; then
+              echo "healthy after ${i}s"
+              ready=yes
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != "yes" ]; then
+            echo "the server never became healthy"
+            docker logs mlflow
+            docker rm -f mlflow >/dev/null
+            exit 1
+          fi
+
+          # experiments/search rather than a get-by-name: it is a real API route that
+          # returns 200 whether or not any experiment exists yet, so the status codes
+          # below are about authorization and nothing else.
+          api='http://127.0.0.1:5000/api/2.0/mlflow/experiments/search'
+          fail=0
+          check() {  # label expected-status curl-args...
+            label=$1; want=$2; shift 2
+            got=$(curl -s -o /dev/null -w '%{http_code}' \
+              -X POST -H 'Content-Type: application/json' -d '{"max_results":1}' "$@" || true)
+            if [ "$got" = "$want" ]; then
+              echo "ok    $label -> $got"
+            else
+              echo "FAIL  $label -> $got (expected $want)"
+              fail=1
+            fi
+          }
+
+          check "anonymous API request"       401 "$api"
+          check "wrong password"              401 -u ci:wrong "$api"
+          check "correct credentials"         200 -u ci:ci-not-a-real-password "$api"
+          # MLflow 3's DNS-rebinding guard defaults to localhost only and returns 200
+          # on /health while returning 403 on every API route, so a default server
+          # deploys green and rejects all of its clients. The entrypoint sets
+          # --allowed-hosts; these two lines are why.
+          check "railway.internal Host"       200 -u ci:ci-not-a-real-password \
+            -H 'Host: mlflow.railway.internal:5000' "$api"
+          check "unknown Host is rejected"    403 -u ci:ci-not-a-real-password \
+            -H 'Host: evil.example.com' "$api"
+
+          [ "$fail" = "0" ] || docker logs mlflow
+          docker rm -f mlflow >/dev/null
+          exit "$fail"
+
       # The database URL points nowhere on purpose. The engine is created lazily,
       # so this proves the modules import — which is exactly what failed in
       # production once — without pretending to test connectivity.
