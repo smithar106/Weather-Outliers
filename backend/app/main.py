@@ -96,6 +96,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "description": "Natural-language questions answered by read-only SQL "
                 "(opt-in; calls a language model and costs money).",
             },
+            {
+                "name": "monitor",
+                "description": "Read-only pipeline runs, evaluations, and MLflow traces.",
+            },
         ],
     )
 

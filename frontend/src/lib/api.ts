@@ -22,6 +22,10 @@ import type {
   CityList,
   Health,
   Methodology,
+  MonitorEvals,
+  MonitorRuns,
+  MonitorTraceDetail,
+  MonitorTraces,
   Rankings,
 } from "@/lib/types";
 
@@ -213,5 +217,40 @@ export function getMethodology(): Promise<Methodology> {
   return get<Methodology>("/api/methodology", {
     revalidate: REVALIDATE_SECONDS_META,
     tags: ["methodology"],
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Monitoring
+// ---------------------------------------------------------------------------
+
+export function getMonitorRuns(limit = 20): Promise<MonitorRuns> {
+  return get<MonitorRuns>("/api/monitor/runs", {
+    params: { limit },
+    revalidate: REVALIDATE_SECONDS_META,
+    tags: ["monitor", "monitor:runs"],
+  });
+}
+
+export function getMonitorEvals(limit = 20): Promise<MonitorEvals> {
+  return get<MonitorEvals>("/api/monitor/evals", {
+    params: { limit },
+    revalidate: REVALIDATE_SECONDS_META,
+    tags: ["monitor", "monitor:evals"],
+  });
+}
+
+export function getMonitorTraces(limit = 50): Promise<MonitorTraces> {
+  return get<MonitorTraces>("/api/monitor/traces", {
+    params: { limit },
+    revalidate: REVALIDATE_SECONDS_META,
+    tags: ["monitor", "monitor:traces"],
+  });
+}
+
+export function getMonitorTrace(traceId: string): Promise<MonitorTraceDetail> {
+  return get<MonitorTraceDetail>(`/api/monitor/traces/${encodeURIComponent(traceId)}`, {
+    revalidate: REVALIDATE_SECONDS_META,
+    tags: [`monitor:trace:${traceId}`],
   });
 }

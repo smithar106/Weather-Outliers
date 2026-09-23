@@ -32,6 +32,7 @@ export function SiteFooter() {
                 { href: "/archive", label: "Archive" },
                 { href: "/methodology", label: "Methodology" },
                 { href: "/evaluation", label: "Evaluation results" },
+                { href: "/monitor", label: "Monitor" },
               ].map((item) => (
                 <li key={item.href}>
                   <Link href={item.href} className="text-paper-dim transition-colors hover:text-paper">

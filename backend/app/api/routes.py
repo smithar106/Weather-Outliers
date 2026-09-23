@@ -21,6 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Res
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app import monitoring
 from app.agent.investigator import month_to_date_budget
 from app.agent.llm import LLMConfigError, get_llm_client
 from app.api.deps import Page, history_range, pagination, parse_iso_date
@@ -58,6 +59,10 @@ from app.schemas import (
     EventDetailOut,
     HealthOut,
     MethodologyOut,
+    MonitorEvalsOut,
+    MonitorRunsOut,
+    MonitorTraceDetailOut,
+    MonitorTracesOut,
     RankedEventOut,
     RankingsOut,
 )
@@ -626,3 +631,70 @@ def chat(
         truncated=result.truncated,
         refused=result.refused,
     )
+
+
+# ---------------------------------------------------------------------------
+# Monitoring (read-only pipeline runs, evaluations, and MLflow traces)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/api/monitor/runs", response_model=MonitorRunsOut, tags=["monitor"])
+def monitor_runs(
+    response: Response,
+    limit: int = Query(20, ge=1, le=200, description="Runs to return, newest first."),
+    session: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> MonitorRunsOut:
+    """Recent pipeline runs: status, completeness, and LLM usage, newest first."""
+    _set_cache(response, settings)
+    runs = monitoring.recent_runs(session, limit=limit)
+    return MonitorRunsOut(count=len(runs), runs=runs)
+
+
+@router.get("/api/monitor/evals", response_model=MonitorEvalsOut, tags=["monitor"])
+def monitor_evals(
+    response: Response,
+    limit: int = Query(20, ge=1, le=200, description="Reports to return, newest first."),
+    session: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> MonitorEvalsOut:
+    """Recent evaluation reports, newest first."""
+    _set_cache(response, settings)
+    reports = monitoring.recent_evals(session, limit=limit)
+    return MonitorEvalsOut(count=len(reports), reports=reports)
+
+
+@router.get("/api/monitor/traces", response_model=MonitorTracesOut, tags=["monitor"])
+def monitor_traces(
+    response: Response,
+    limit: int = Query(50, ge=1, le=200, description="Traces to return, newest first."),
+    settings: Settings = Depends(get_settings),
+) -> MonitorTracesOut:
+    """MLflow traces for the pipeline experiment.
+
+    When the tracking store is not configured or reachable, ``available`` is
+    false and ``note`` says why — the list is empty rather than invented.
+    """
+    response.headers["Cache-Control"] = "no-store"
+    payload = monitoring.list_traces(settings, limit=limit)
+    return MonitorTracesOut(**payload)
+
+
+@router.get(
+    "/api/monitor/traces/{trace_id}", response_model=MonitorTraceDetailOut, tags=["monitor"]
+)
+def monitor_trace_detail(
+    response: Response,
+    trace_id: str = Path(description="MLflow trace id (e.g. tr-…)."),
+    settings: Settings = Depends(get_settings),
+) -> MonitorTraceDetailOut:
+    """One trace's span tree, with each span's status, latency and attributes."""
+    response.headers["Cache-Control"] = "no-store"
+    payload = monitoring.get_trace(settings, trace_id)
+    if payload is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Trace {trace_id!r} not found (or the tracking store is unreachable).",
+        )
+    spans = payload.pop("spans", [])
+    return MonitorTraceDetailOut(**payload, spans=spans)

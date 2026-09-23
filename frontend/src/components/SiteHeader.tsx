@@ -10,6 +10,7 @@ const NAV = [
   { href: "/archive", label: "Archive" },
   { href: "/methodology", label: "Methodology" },
   { href: "/evaluation", label: "Evaluation" },
+  { href: "/monitor", label: "Monitor" },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {

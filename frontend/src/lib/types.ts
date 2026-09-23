@@ -455,3 +455,89 @@ export interface EvalReport {
   suites: EvalSuite[];
   limitations: string[];
 }
+
+// ---------------------------------------------------------------------------
+// Monitoring (pipeline runs, evaluations, MLflow traces)
+// ---------------------------------------------------------------------------
+
+export interface MonitorRun {
+  run_id: string;
+  kind: string;
+  analysis_date: string | null;
+  status: string;
+  data_tier: string | null;
+  published: boolean;
+  started_at: string | null;
+  duration_ms: number | null;
+  cities_total: number;
+  cities_with_data: number;
+  completeness: number | null;
+  events_total: number;
+  events_published: number;
+  llm_calls: number;
+  llm_estimated_usd: number;
+  error: string | null;
+  error_type: string | null;
+}
+
+export interface MonitorRuns {
+  count: number;
+  runs: MonitorRun[];
+}
+
+export interface MonitorEval {
+  id: number;
+  generated_at: string | null;
+  status: string;
+  git_commit: string | null;
+  git_dirty: boolean;
+  suites_total: number;
+  suites_passed: number;
+  cases_total: number;
+  cases_passed: number;
+  duration_ms: number;
+}
+
+export interface MonitorEvals {
+  count: number;
+  reports: MonitorEval[];
+}
+
+export interface MonitorSpan {
+  span_id: string;
+  parent_span_id: string | null;
+  name: string;
+  span_type: string | null;
+  status: string;
+  latency_ms: number | null;
+  attributes: Record<string, unknown>;
+}
+
+export interface MonitorTrace {
+  trace_id: string;
+  timestamp_ms: number | null;
+  status: string;
+  duration_ms: number | null;
+  root_span: string | null;
+  span_count: number;
+  model: string | null;
+  methodology_version: string | null;
+  prompt_version: string | null;
+  run_id: string | null;
+}
+
+export interface MonitorTraceDetail {
+  trace_id: string;
+  timestamp_ms: number | null;
+  status: string;
+  duration_ms: number | null;
+  spans: MonitorSpan[];
+}
+
+export interface MonitorTraces {
+  /** False when the tracking store is not configured or unreachable. */
+  available: boolean;
+  note: string | null;
+  count: number;
+  traces: MonitorTrace[];
+}

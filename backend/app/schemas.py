@@ -372,6 +372,94 @@ class ErrorOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Monitoring (pipeline runs, evaluations, MLflow traces)
+# ---------------------------------------------------------------------------
+
+
+class MonitorRunOut(ApiModel):
+    run_id: str
+    kind: str
+    analysis_date: date | None = None
+    status: str
+    data_tier: str | None = None
+    published: bool
+    started_at: datetime | None = None
+    duration_ms: int | None = None
+    cities_total: int = 0
+    cities_with_data: int = 0
+    completeness: float | None = None
+    events_total: int = 0
+    events_published: int = 0
+    llm_calls: int = 0
+    llm_estimated_usd: float = 0.0
+    error: str | None = None
+    error_type: str | None = None
+
+
+class MonitorRunsOut(ApiModel):
+    count: int
+    runs: list[MonitorRunOut] = Field(default_factory=list)
+
+
+class MonitorEvalOut(ApiModel):
+    id: int
+    generated_at: datetime | None = None
+    status: str
+    git_commit: str | None = None
+    git_dirty: bool = False
+    suites_total: int = 0
+    suites_passed: int = 0
+    cases_total: int = 0
+    cases_passed: int = 0
+    duration_ms: int = 0
+
+
+class MonitorEvalsOut(ApiModel):
+    count: int
+    reports: list[MonitorEvalOut] = Field(default_factory=list)
+
+
+class MonitorSpanOut(ApiModel):
+    span_id: str
+    parent_span_id: str | None = None
+    name: str
+    span_type: str | None = None
+    status: str
+    latency_ms: int | None = None
+    attributes: dict = Field(default_factory=dict)
+
+
+class MonitorTraceOut(ApiModel):
+    trace_id: str
+    timestamp_ms: int | None = None
+    status: str
+    duration_ms: int | None = None
+    root_span: str | None = None
+    span_count: int = 0
+    model: str | None = None
+    methodology_version: str | None = None
+    prompt_version: str | None = None
+    run_id: str | None = None
+
+
+class MonitorTraceDetailOut(ApiModel):
+    trace_id: str
+    timestamp_ms: int | None = None
+    status: str
+    duration_ms: int | None = None
+    spans: list[MonitorSpanOut] = Field(default_factory=list)
+
+
+class MonitorTracesOut(ApiModel):
+    #: False when the tracking store is not configured or unreachable, in which
+    #: case ``note`` says why and ``traces`` is empty rather than fabricated.
+    available: bool
+    note: str | None = None
+    count: int = 0
+    traces: list[MonitorTraceOut] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
 # Chat (NL→SQL)
 # ---------------------------------------------------------------------------
 
