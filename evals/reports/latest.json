@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-09-22T17:32:01+00:00",
-  "git_commit": null,
-  "git_dirty": false,
+  "generated_at": "2026-09-23T01:25:01+00:00",
+  "git_commit": "dda5943",
+  "git_dirty": true,
   "methodology_version": "1.0.0",
   "status": "passed",
   "environment": {
@@ -12,11 +12,11 @@
     "database": "sqlite (in-memory scratch)"
   },
   "totals": {
-    "suites_total": 4,
-    "suites_passed": 4,
-    "cases_total": 62,
-    "cases_passed": 62,
-    "duration_ms": 27041
+    "suites_total": 8,
+    "suites_passed": 8,
+    "cases_total": 138,
+    "cases_passed": 138,
+    "duration_ms": 23661
   },
   "suites": [
     {
@@ -24,17 +24,17 @@
       "title": "Backend test suite",
       "description": "Runs the backend pytest suite and parses pytest's own JUnit XML. Covers the statistical engine, the grounding guards, the pipeline, and the HTTP API.",
       "status": "passed",
-      "duration_ms": 15005,
+      "duration_ms": 15820,
       "metrics": [
         {
           "label": "Tests collected",
-          "value": 251,
+          "value": 270,
           "unit": "tests",
           "detail": null
         },
         {
           "label": "Tests passed",
-          "value": 251,
+          "value": 270,
           "unit": "tests",
           "detail": null
         },
@@ -64,13 +64,13 @@
         },
         {
           "label": "Test wall-clock",
-          "value": 13.48,
+          "value": 14.25,
           "unit": "s",
           "detail": "as measured by pytest, excluding interpreter startup"
         },
         {
           "label": "Test modules",
-          "value": 5,
+          "value": 6,
           "unit": "files",
           "detail": null
         },
@@ -88,7 +88,7 @@
           "passed": true,
           "category": "test_module",
           "expected": "all tests pass",
-          "observed": "31/31 passed",
+          "observed": "34/34 passed",
           "detail": null
         },
         {
@@ -101,12 +101,21 @@
           "detail": null
         },
         {
+          "id": "tests/test_observability.py",
+          "title": "tests/test_observability.py",
+          "passed": true,
+          "category": "test_module",
+          "expected": "all tests pass",
+          "observed": "15/15 passed",
+          "detail": null
+        },
+        {
           "id": "tests/test_pipeline.py",
           "title": "tests/test_pipeline.py",
           "passed": true,
           "category": "test_module",
           "expected": "all tests pass",
-          "observed": "33/33 passed",
+          "observed": "34/34 passed",
           "detail": null
         },
         {
@@ -128,9 +137,715 @@
           "detail": null
         }
       ],
-      "cases_total": 5,
-      "cases_passed": 5,
+      "cases_total": 6,
+      "cases_passed": 6,
       "notes": [],
+      "error": null
+    },
+    {
+      "id": "anomaly_score",
+      "title": "Anomaly scores vs independent reference",
+      "description": "Recomputes every dataset case with arithmetic that shares no code with the application, requires exact agreement where the quantile sketch is lossless, and bounds the remainder by the sketch's own grid resolution.",
+      "status": "passed",
+      "duration_ms": 208,
+      "metrics": [
+        {
+          "label": "Dataset version",
+          "value": "scoring-1.0.0",
+          "unit": null,
+          "detail": null
+        },
+        {
+          "label": "Cases in dataset",
+          "value": 23,
+          "unit": null,
+          "detail": null
+        },
+        {
+          "label": "Lossless-tail comparisons",
+          "value": 12,
+          "unit": null,
+          "detail": "observation at or beyond the 5th order statistic; exact match required"
+        },
+        {
+          "label": "Worst lossless-tail score difference",
+          "value": 0.0,
+          "unit": "score",
+          "detail": "tolerance 1e-09"
+        },
+        {
+          "label": "Interpolated-interior comparisons",
+          "value": 7,
+          "unit": null,
+          "detail": "bounded by the sketch's grid resolution, not required to match"
+        },
+        {
+          "label": "Worst interior probability difference",
+          "value": 0.0021286031042129228,
+          "unit": "probability",
+          "detail": "worst case: rep_wind_gust_p98"
+        },
+        {
+          "label": "Worst interior score difference",
+          "value": 0.043924000000000074,
+          "unit": "score",
+          "detail": null
+        },
+        {
+          "label": "Interior bound violations",
+          "value": 0,
+          "unit": null,
+          "detail": null
+        },
+        {
+          "label": "Sweep points",
+          "value": 999,
+          "unit": null,
+          "detail": "seeded normal sample, n=450"
+        },
+        {
+          "label": "Sweep: worst fraction of available grid width used",
+          "value": 0.3170276046193048,
+          "unit": null,
+          "detail": "1.0 would mean the bound is exactly saturated"
+        },
+        {
+          "label": "Checks passed",
+          "value": 1.0,
+          "unit": "fraction",
+          "detail": null
+        }
+      ],
+      "cases": [
+        {
+          "id": "constant_tail_order_stats",
+          "title": "Reference restatement of TAIL_ORDER_STATS still matches the application",
+          "passed": true,
+          "category": "drift",
+          "expected": "TAIL_ORDER_STATS=5",
+          "observed": "reference=5",
+          "detail": null
+        },
+        {
+          "id": "constant_margin_weight",
+          "title": "Reference restatement of MARGIN_WEIGHT still matches the application",
+          "passed": true,
+          "category": "drift",
+          "expected": "MARGIN_WEIGHT=0.5",
+          "observed": "reference=0.5",
+          "detail": null
+        },
+        {
+          "id": "constant_comparison_decimals",
+          "title": "Reference restatement of COMPARISON_DECIMALS still matches the application",
+          "passed": true,
+          "category": "drift",
+          "expected": "COMPARISON_DECIMALS=6",
+          "observed": "reference=6",
+          "detail": null
+        },
+        {
+          "id": "bounded_rep_temp_max_p90",
+          "title": "Warm but unremarkable daily maximum",
+          "passed": true,
+          "category": "representative/interpolated-interior",
+          "expected": "|\u0394p| \u2264 bracketing grid width 0.050000",
+          "observed": "|\u0394p| = 0.001774, \u0394score = 0.007636",
+          "detail": null
+        },
+        {
+          "id": "bounded_rep_temp_max_median",
+          "title": "A completely ordinary day, which must not reach the board",
+          "passed": true,
+          "category": "representative/interpolated-interior",
+          "expected": "|\u0394p| \u2264 bracketing grid width 0.050000",
+          "observed": "|\u0394p| = 0.000000, \u0394score = 0.000000",
+          "detail": null
+        },
+        {
+          "id": "bounded_rep_temp_min_p99",
+          "title": "Unusually warm overnight minimum",
+          "passed": true,
+          "category": "representative/interpolated-interior",
+          "expected": "|\u0394p| \u2264 bracketing grid width 0.027778",
+          "observed": "|\u0394p| = 0.000589, \u0394score = 0.020523",
+          "detail": null
+        },
+        {
+          "id": "bounded_rep_temp_mean_cold_tail",
+          "title": "Cold anomaly, exercising the lower tail",
+          "passed": true,
+          "category": "representative/interpolated-interior",
+          "expected": "|\u0394p| \u2264 bracketing grid width 0.027778",
+          "observed": "|\u0394p| = 0.002129, \u0394score = 0.043924",
+          "detail": null
+        },
+        {
+          "id": "exact_rep_precip_wet_climate",
+          "title": "Heavy rain in a climate that rains often",
+          "passed": true,
+          "category": "representative/lossless-tail",
+          "expected": "score 2.178383000 (exact)",
+          "observed": "score 2.178383000, \u0394=0.00e+00",
+          "detail": null
+        },
+        {
+          "id": "bounded_rep_wind_gust_p98",
+          "title": "Strong gust, upper tail only",
+          "passed": true,
+          "category": "representative/interpolated-interior",
+          "expected": "|\u0394p| \u2264 bracketing grid width 0.027778",
+          "observed": "|\u0394p| = 0.002129, \u0394score = 0.043924",
+          "detail": null
+        },
+        {
+          "id": "exact_edge_equals_sample_max",
+          "title": "Exactly equals the reference-period maximum",
+          "passed": true,
+          "category": "edge/lossless-tail",
+          "expected": "score 2.654177000 (exact)",
+          "observed": "score 2.654177000, \u0394=0.00e+00",
+          "detail": null
+        },
+        {
+          "id": "exact_edge_above_sample_max",
+          "title": "Clears the reference-period maximum outright",
+          "passed": true,
+          "category": "edge/lossless-tail",
+          "expected": "score 2.721833000 (exact)",
+          "observed": "score 2.721833000, \u0394=0.00e+00",
+          "detail": null
+        },
+        {
+          "id": "exact_edge_below_sample_min",
+          "title": "Colder than anything in the reference sample",
+          "passed": true,
+          "category": "edge/lossless-tail",
+          "expected": "score 2.720138000 (exact)",
+          "observed": "score 2.720138000, \u0394=0.00e+00",
+          "detail": null
+        },
+        {
+          "id": "exact_edge_fifth_order_stat",
+          "title": "Sits exactly on the retained-tail boundary",
+          "passed": true,
+          "category": "edge/lossless-tail",
+          "expected": "score 1.955207000 (exact)",
+          "observed": "score 1.955207000, \u0394=0.00e+00",
+          "detail": null
+        },
+        {
+          "id": "bounded_edge_sixth_order_stat",
+          "title": "One step inside the sketch's interpolated region",
+          "passed": true,
+          "category": "edge/interpolated-interior",
+          "expected": "|\u0394p| \u2264 bracketing grid width 0.027778",
+          "observed": "|\u0394p| = 0.000718, \u0394score = 0.022833",
+          "detail": null
+        },
+        {
+          "id": "exact_edge_constant_baseline",
+          "title": "Degenerate baseline: every reference value identical",
+          "passed": true,
+          "category": "edge/lossless-tail",
+          "expected": "score 2.654177000 (exact)",
+          "observed": "score 2.654177000, \u0394=0.00e+00",
+          "detail": null
+        },
+        {
+          "id": "exact_edge_precip_dry_climate",
+          "title": "Heavy rain where it almost never rains",
+          "passed": true,
+          "category": "edge/lossless-tail",
+          "expected": "score 3.064448000 (exact)",
+          "observed": "score 3.064448000, \u0394=0.00e+00",
+          "detail": null
+        },
+        {
+          "id": "exact_edge_precip_zero_observed",
+          "title": "A dry day is not an upper-tail event",
+          "passed": true,
+          "category": "edge/lossless-tail",
+          "expected": "score 0.000000000 (exact)",
+          "observed": "score 0.000000000, \u0394=0.00e+00",
+          "detail": null
+        },
+        {
+          "id": "exact_fail_insufficient_samples",
+          "title": "Too few reference values to estimate a tail",
+          "passed": true,
+          "category": "synthetic_failure/lossless-tail",
+          "expected": "score 2.054303000 (exact)",
+          "observed": "score 2.054303000, \u0394=0.00e+00",
+          "detail": null
+        },
+        {
+          "id": "exact_fail_insufficient_years",
+          "title": "Enough values, drawn from too few years",
+          "passed": true,
+          "category": "synthetic_failure/lossless-tail",
+          "expected": "score 2.701419000 (exact)",
+          "observed": "score 2.701419000, \u0394=0.00e+00",
+          "detail": null
+        },
+        {
+          "id": "exact_fail_precip_too_few_wet_days",
+          "title": "Almost no wet days in the reference window",
+          "passed": true,
+          "category": "synthetic_failure/lossless-tail",
+          "expected": "score 3.029616000 (exact)",
+          "observed": "score 3.029616000, \u0394=0.00e+00",
+          "detail": null
+        },
+        {
+          "id": "exact_fail_precip_wet_day_floor_raised",
+          "title": "Wet-day floor raised above the value used when the baseline was built",
+          "passed": true,
+          "category": "synthetic_failure/lossless-tail",
+          "expected": "score 2.355485000 (exact)",
+          "observed": "score 2.355485000, \u0394=0.00e+00",
+          "detail": null
+        },
+        {
+          "id": "bounded_fail_below_score_threshold",
+          "title": "Scores just under the publication floor",
+          "passed": true,
+          "category": "synthetic_failure/interpolated-interior",
+          "expected": "|\u0394p| \u2264 bracketing grid width 0.050000",
+          "observed": "|\u0394p| = 0.000222, \u0394score = 0.000213",
+          "detail": null
+        },
+        {
+          "id": "sweep_exact_tail_agreement",
+          "title": "Sweep: exact agreement at all 16 lossless-tail points",
+          "passed": true,
+          "category": "sweep",
+          "expected": "0 mismatches beyond 1e-9",
+          "observed": "0 mismatches",
+          "detail": null
+        },
+        {
+          "id": "sweep_interior_bound",
+          "title": "Sweep: interior discrepancy within the bracketing grid interval at all 983 interior points",
+          "passed": true,
+          "category": "sweep",
+          "expected": "0 points exceed their bracketing grid width",
+          "observed": "0 exceed; worst |\u0394p| = 0.012703, worst fraction of the available width = 0.317",
+          "detail": null
+        }
+      ],
+      "cases_total": 24,
+      "cases_passed": 24,
+      "notes": [
+        "dataset scoring-1.0.0",
+        "Exact agreement is required only where the quantile sketch retains the raw order statistics. Elsewhere the two routes are bounded by the grid interval that brackets the observation, which is a property of monotone piecewise-linear interpolation rather than a chosen tolerance.",
+        "The residual interior difference is mostly definitional: the stored grid holds R type-7 quantiles while both tail estimates use Weibull plotting positions. The two disagree by roughly one order statistic."
+      ],
+      "error": null
+    },
+    {
+      "id": "missing_data",
+      "title": "Missing-data handling",
+      "description": "Every form of absent or insufficient input produces a named exclusion or no candidate at all \u2014 never a score that looks as though the data were present.",
+      "status": "passed",
+      "duration_ms": 16,
+      "metrics": [
+        {
+          "label": "Dataset version",
+          "value": "scoring-1.0.0",
+          "unit": null,
+          "detail": null
+        },
+        {
+          "label": "Absence cases exercised",
+          "value": 11,
+          "unit": null,
+          "detail": null
+        },
+        {
+          "label": "Exclusion reasons reached",
+          "value": "5/6",
+          "unit": null,
+          "detail": "below_score_threshold, dry_day_not_ranked, insufficient_baseline, insufficient_wet_days, no_baseline"
+        },
+        {
+          "label": "Ineligible cases that were scored anyway",
+          "value": 0,
+          "unit": null,
+          "detail": "must be 0"
+        },
+        {
+          "label": "Completeness floor",
+          "value": 0.8,
+          "unit": "fraction of registry",
+          "detail": "a run under this refuses to publish"
+        },
+        {
+          "label": "Checks passed",
+          "value": 1.0,
+          "unit": "fraction",
+          "detail": null
+        }
+      ],
+      "cases": [
+        {
+          "id": "rep_temp_max_median",
+          "title": "A completely ordinary day, which must not reach the board",
+          "passed": true,
+          "category": "representative",
+          "expected": "ineligible, reason=below_score_threshold",
+          "observed": "eligible=False, reason=below_score_threshold",
+          "detail": "The single most important negative case in the set. A median day scores about 0.30, under the 0.5 publication floor, so the ranking is not merely ordering noise on quiet days \u2014 it declines to publish it."
+        },
+        {
+          "id": "edge_precip_zero_observed",
+          "title": "A dry day is not an upper-tail event",
+          "passed": true,
+          "category": "edge",
+          "expected": "ineligible, reason=dry_day_not_ranked",
+          "observed": "eligible=False, reason=dry_day_not_ranked",
+          "detail": "Dry spells are a multi-day question and out of scope for a daily metric, so zero rainfall is excluded by name rather than scored as a lower-tail outlier."
+        },
+        {
+          "id": "fail_no_baseline",
+          "title": "No cached baseline for this city, metric and day",
+          "passed": true,
+          "category": "synthetic_failure",
+          "expected": "ineligible, reason=no_baseline",
+          "observed": "eligible=False, reason=no_baseline",
+          "detail": "Must produce an inspectable exclusion, not a silent drop and not a score computed against nothing."
+        },
+        {
+          "id": "fail_empty_sample",
+          "title": "Baseline row exists but its sample is empty",
+          "passed": true,
+          "category": "synthetic_failure",
+          "expected": "ineligible, reason=no_baseline",
+          "observed": "eligible=False, reason=no_baseline",
+          "detail": null
+        },
+        {
+          "id": "fail_insufficient_samples",
+          "title": "Too few reference values to estimate a tail",
+          "passed": true,
+          "category": "synthetic_failure",
+          "expected": "ineligible, reason=insufficient_baseline",
+          "observed": "eligible=False, reason=insufficient_baseline",
+          "detail": "100 < the 120-sample floor. The value would score highly if scored, which is exactly why the gate has to come first."
+        },
+        {
+          "id": "fail_insufficient_years",
+          "title": "Enough values, drawn from too few years",
+          "passed": true,
+          "category": "synthetic_failure",
+          "expected": "ineligible, reason=insufficient_baseline",
+          "observed": "eligible=False, reason=insufficient_baseline",
+          "detail": "Sample count alone is not enough: 450 values from 10 years cannot resolve a 1-in-30-year tail, however many of them there are."
+        },
+        {
+          "id": "fail_precip_too_few_wet_days",
+          "title": "Almost no wet days in the reference window",
+          "passed": true,
+          "category": "synthetic_failure",
+          "expected": "ineligible, reason=insufficient_baseline",
+          "observed": "eligible=False, reason=insufficient_baseline",
+          "detail": "Expects 'insufficient_baseline' rather than 'insufficient_wet_days' on purpose. The baseline builder folds the wet-day floor into the 'sufficient' flag, so that broader gate fires first. Recorded as observed behaviour, not asserted as the nicer of the two names."
+        },
+        {
+          "id": "fail_precip_wet_day_floor_raised",
+          "title": "Wet-day floor raised above the value used when the baseline was built",
+          "passed": true,
+          "category": "synthetic_failure",
+          "expected": "ineligible, reason=insufficient_wet_days",
+          "observed": "eligible=False, reason=insufficient_wet_days",
+          "detail": "The only route by which 'insufficient_wet_days' is reachable, and the reason it is still worth having: a caller that demands a stricter floor than the stored baseline was built to must be refused rather than served."
+        },
+        {
+          "id": "fail_observed_missing",
+          "title": "Observation absent",
+          "passed": true,
+          "category": "synthetic_failure",
+          "expected": "no candidate at all",
+          "observed": "None",
+          "detail": "Nothing to score, so nothing is returned \u2014 as distinct from a baseline problem, which produces a named exclusion."
+        },
+        {
+          "id": "fail_observed_not_finite",
+          "title": "Observation is NaN",
+          "passed": true,
+          "category": "synthetic_failure",
+          "expected": "no candidate at all",
+          "observed": "None",
+          "detail": "A NaN that reached the scorer would propagate through every comparison and silently sort anywhere, so it has to be refused at the door."
+        },
+        {
+          "id": "fail_below_score_threshold",
+          "title": "Scores just under the publication floor",
+          "passed": true,
+          "category": "synthetic_failure",
+          "expected": "ineligible, reason=below_score_threshold",
+          "observed": "eligible=False, reason=below_score_threshold",
+          "detail": null
+        },
+        {
+          "id": "exclusion_keeps_its_evidence",
+          "title": "An excluded candidate still carries the evidence for why",
+          "passed": true,
+          "category": "synthetic_failure",
+          "expected": "evidence contains the exclusion reason and the baseline it was judged against",
+          "observed": "present",
+          "detail": "Exclusions are dropped from the board but not from the record. Without this, 'my city is missing' has no answer."
+        },
+        {
+          "id": "completeness_just_below_floor",
+          "title": "Completeness 79% vs 80% floor",
+          "passed": true,
+          "category": "edge",
+          "expected": "refuses to publish",
+          "observed": "refused",
+          "detail": null
+        },
+        {
+          "id": "completeness_exactly_at_floor",
+          "title": "Completeness 80% vs 80% floor",
+          "passed": true,
+          "category": "edge",
+          "expected": "publishes",
+          "observed": "published",
+          "detail": null
+        },
+        {
+          "id": "completeness_well_below_floor",
+          "title": "Completeness 40% vs 80% floor",
+          "passed": true,
+          "category": "edge",
+          "expected": "refuses to publish",
+          "observed": "refused",
+          "detail": null
+        },
+        {
+          "id": "completeness_complete",
+          "title": "Completeness 100% vs 80% floor",
+          "passed": true,
+          "category": "edge",
+          "expected": "publishes",
+          "observed": "published",
+          "detail": null
+        },
+        {
+          "id": "completeness_no_cities_reported",
+          "title": "Completeness 0% vs 80% floor",
+          "passed": true,
+          "category": "edge",
+          "expected": "refuses to publish",
+          "observed": "refused",
+          "detail": null
+        },
+        {
+          "id": "exclusion_vocabulary_closed",
+          "title": "Every exclusion reason emitted is one the documentation defines",
+          "passed": true,
+          "category": "drift",
+          "expected": "reasons \u2286 ['below_score_threshold', 'dry_day_not_ranked', 'insufficient_baseline', 'insufficient_wet_days', 'no_baseline', 'tail_probability_unavailable']",
+          "observed": "observed ['below_score_threshold', 'dry_day_not_ranked', 'insufficient_baseline', 'insufficient_wet_days', 'no_baseline']",
+          "detail": null
+        }
+      ],
+      "cases_total": 18,
+      "cases_passed": 18,
+      "notes": [
+        "dataset scoring-1.0.0",
+        "Exclusion reasons not reached by this dataset: tail_probability_unavailable",
+        "'failed run does not overwrite the last good board' is covered by the reproducibility suite, not duplicated here."
+      ],
+      "error": null
+    },
+    {
+      "id": "ranking",
+      "title": "Top-10 ranking correctness",
+      "description": "Exercises every link of the tie-break chain in isolation, checks the board is invariant to input order, and re-derives the published board with an independently written selector.",
+      "status": "passed",
+      "duration_ms": 5,
+      "metrics": [
+        {
+          "label": "Tie-break links decided in isolation",
+          "value": "5/5",
+          "unit": null,
+          "detail": "each pair equal on every earlier link"
+        },
+        {
+          "label": "Candidates stored for the analysis date",
+          "value": 50,
+          "unit": null,
+          "detail": "every scored city-metric pair, eligible or not"
+        },
+        {
+          "label": "Published events beyond the whole baseline sample",
+          "value": "1/10",
+          "unit": null,
+          "detail": "no day in the reference window reached this value"
+        },
+        {
+          "label": "Published events on the probability floor",
+          "value": "1/10",
+          "unit": null,
+          "detail": "reported as 'at least this rare' rather than as a point estimate"
+        },
+        {
+          "label": "Permutations tested",
+          "value": 25,
+          "unit": null,
+          "detail": "seed 20260922"
+        },
+        {
+          "label": "Checks passed",
+          "value": 1.0,
+          "unit": "fraction",
+          "detail": null
+        }
+      ],
+      "cases": [
+        {
+          "id": "tiebreak_chain_matches",
+          "title": "Reference restatement of the tie-break chain matches the application",
+          "passed": true,
+          "category": "drift",
+          "expected": "['anomaly_score desc', 'tail_probability asc', 'abs(robust_deviation) desc', 'metric precedence', 'city_id asc']",
+          "observed": "['anomaly_score desc', 'tail_probability asc', 'abs(robust_deviation) desc', 'metric precedence', 'city_id asc']",
+          "detail": null
+        },
+        {
+          "id": "metric_precedence_matches",
+          "title": "Reference restatement of metric precedence matches the application",
+          "passed": true,
+          "category": "drift",
+          "expected": "['temp_max', 'temp_min', 'precipitation', 'wind_gust', 'temp_mean']",
+          "observed": "['temp_max', 'temp_min', 'precipitation', 'wind_gust', 'temp_mean']",
+          "detail": null
+        },
+        {
+          "id": "link1_anomaly_score",
+          "title": "Higher anomaly score wins",
+          "passed": true,
+          "category": "tiebreak",
+          "expected": "bbb first, in either input order",
+          "observed": "production ['bbb'], reference ['bbb']",
+          "detail": null
+        },
+        {
+          "id": "link2_tail_probability",
+          "title": "Equal scores: the rarer tail wins",
+          "passed": true,
+          "category": "tiebreak",
+          "expected": "bbb first, in either input order",
+          "observed": "production ['bbb'], reference ['bbb']",
+          "detail": null
+        },
+        {
+          "id": "link3_robust_deviation",
+          "title": "Equal score and tail: the larger absolute robust deviation wins",
+          "passed": true,
+          "category": "tiebreak",
+          "expected": "bbb first, in either input order",
+          "observed": "production ['bbb'], reference ['bbb']",
+          "detail": null
+        },
+        {
+          "id": "link4_metric_precedence",
+          "title": "Equal on all three numbers: fixed metric precedence decides",
+          "passed": true,
+          "category": "tiebreak",
+          "expected": "bbb first, in either input order",
+          "observed": "production ['bbb'], reference ['bbb']",
+          "detail": null
+        },
+        {
+          "id": "link5_city_id",
+          "title": "Identical in every respect: city id makes the order total",
+          "passed": true,
+          "category": "tiebreak",
+          "expected": "aaa first, in either input order",
+          "observed": "production ['aaa'], reference ['aaa']",
+          "detail": null
+        },
+        {
+          "id": "ranks_contiguous_from_one",
+          "title": "Ranks are 1..N with no gaps",
+          "passed": true,
+          "category": "invariant",
+          "expected": "1..10",
+          "observed": "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]",
+          "detail": null
+        },
+        {
+          "id": "one_event_per_city",
+          "title": "No city appears twice on the board",
+          "passed": true,
+          "category": "invariant",
+          "expected": "10 distinct cities",
+          "observed": "10 distinct",
+          "detail": null
+        },
+        {
+          "id": "scores_non_increasing",
+          "title": "Scores never rise as rank increases",
+          "passed": true,
+          "category": "invariant",
+          "expected": "monotone non-increasing",
+          "observed": "[3.9, 3.9, 3.8, 3.7, 3.6, 3.6, 3.6, 3.5, 3.5, 3.4]",
+          "detail": null
+        },
+        {
+          "id": "only_eligible_published",
+          "title": "Nothing ineligible reaches the board",
+          "passed": true,
+          "category": "invariant",
+          "expected": "every published candidate eligible",
+          "observed": "0 ineligible published",
+          "detail": null
+        },
+        {
+          "id": "permutation_invariant",
+          "title": "25 input permutations all produce the identical board",
+          "passed": true,
+          "category": "invariant",
+          "expected": "0 permutations differ",
+          "observed": "0 differ",
+          "detail": "Input order reaches the sort as database and dictionary iteration order, neither of which is guaranteed stable."
+        },
+        {
+          "id": "independent_selector_agrees_synthetic",
+          "title": "Independently written selector picks the same ten, in the same order",
+          "passed": true,
+          "category": "independent",
+          "expected": "[(1, 'city-07', 'temp_max'), (2, 'city-03', 'wind_gust'), (3, 'city-02', 'temp_min')] \u2026",
+          "observed": "[(1, 'city-07', 'temp_max'), (2, 'city-03', 'wind_gust'), (3, 'city-02', 'temp_min')] \u2026",
+          "detail": null
+        },
+        {
+          "id": "regional_sweep_backfills",
+          "title": "One city with the five strongest events does not sweep the board",
+          "passed": true,
+          "category": "invariant",
+          "expected": "reference: 5 rows for 'sweeper' out of 9",
+          "observed": "production: 5 rows for 'sweeper' out of 9, 4 backfilled",
+          "detail": "With 9 candidates across 5 cities and a top-10 board, the first pass yields 5 rows and the documented backfill supplies the rest \u2014 so 'sweeper' legitimately reappears, but only after every other city has had its turn."
+        },
+        {
+          "id": "published_board_reproduced",
+          "title": "The published board is exactly what the independent selector picks",
+          "passed": true,
+          "category": "independent",
+          "expected": "10 rows: [(1, 'ca-calgary-ab', 'temp_max'), (2, 'us-buffalo-ny', 'wind_gust'), (3, 'us-fargo-nd', 'precipitation')] \u2026",
+          "observed": "10 rows: [(1, 'ca-calgary-ab', 'temp_max'), (2, 'us-buffalo-ny', 'wind_gust'), (3, 'us-fargo-nd', 'precipitation')] \u2026",
+          "detail": "re-derived from all 50 stored candidates for 2025-07-15"
+        }
+      ],
+      "cases_total": 15,
+      "cases_passed": 15,
+      "notes": [
+        "Metric precedence under test: temp_max, temp_min, precipitation, wind_gust, temp_mean"
+      ],
       "error": null
     },
     {
@@ -138,7 +853,7 @@
       "title": "Grounding guards",
       "description": "Replays labelled explanation cases through the production guards, then re-validates every explanation the pipeline published against the numbers its read-only tools return.",
       "status": "passed",
-      "duration_ms": 48,
+      "duration_ms": 46,
       "metrics": [
         {
           "label": "Labelled cases",
@@ -448,11 +1163,233 @@
       "error": null
     },
     {
+      "id": "explanation_agreement",
+      "title": "Explanations agree with their source metrics",
+      "description": "Extracts the numeric and directional claims from each published explanation and checks them against the stored calculation for that event, not merely against a whitelist of citable numbers.",
+      "status": "passed",
+      "duration_ms": 4,
+      "metrics": [
+        {
+          "label": "Published explanations checked",
+          "value": 10,
+          "unit": null,
+          "detail": null
+        },
+        {
+          "label": "Generators",
+          "value": "template: 10",
+          "unit": null,
+          "detail": null
+        },
+        {
+          "label": "Numeric claims extracted",
+          "value": 96,
+          "unit": null,
+          "detail": null
+        },
+        {
+          "label": "Numeric claims agreeing with the stored calculation",
+          "value": 1.0,
+          "unit": "fraction",
+          "detail": "96/96"
+        },
+        {
+          "label": "Claim kinds exercised",
+          "value": "deviation, median, p25, p75, percentile, return_period, sample_max, sample_min, sample_size, tail_probability",
+          "unit": null,
+          "detail": "each maps to a specific stored column"
+        },
+        {
+          "label": "Claims per explanation",
+          "value": 9.6,
+          "unit": null,
+          "detail": "mean; the coverage floor is per-explanation"
+        },
+        {
+          "label": "Checks passed",
+          "value": 1.0,
+          "unit": "fraction",
+          "detail": null
+        }
+      ],
+      "cases": [
+        {
+          "id": "claims:2025-07-15_ca-calgary-ab_temp_max@1.0.0",
+          "title": "#1 Calgary temp_max \u2014 9 claims vs the stored calculation",
+          "passed": true,
+          "category": "numeric_agreement",
+          "expected": "all 9 extracted claims match their stored column, and the headline states the observed value",
+          "observed": "9/9 agree",
+          "detail": null
+        },
+        {
+          "id": "claims:2025-07-15_us-buffalo-ny_wind_gust@1.0.0",
+          "title": "#2 Buffalo wind_gust \u2014 10 claims vs the stored calculation",
+          "passed": true,
+          "category": "numeric_agreement",
+          "expected": "all 10 extracted claims match their stored column, and the headline states the observed value",
+          "observed": "10/10 agree",
+          "detail": null
+        },
+        {
+          "id": "claims:2025-07-15_us-fargo-nd_precipitation@1.0.0",
+          "title": "#3 Fargo precipitation \u2014 10 claims vs the stored calculation",
+          "passed": true,
+          "category": "numeric_agreement",
+          "expected": "all 10 extracted claims match their stored column, and the headline states the observed value",
+          "observed": "10/10 agree",
+          "detail": null
+        },
+        {
+          "id": "claims:2025-07-15_us-albuquerque-nm_temp_max@1.0.0",
+          "title": "#4 Albuquerque temp_max \u2014 10 claims vs the stored calculation",
+          "passed": true,
+          "category": "numeric_agreement",
+          "expected": "all 10 extracted claims match their stored column, and the headline states the observed value",
+          "observed": "10/10 agree",
+          "detail": null
+        },
+        {
+          "id": "claims:2025-07-15_us-nashville-tn_wind_gust@1.0.0",
+          "title": "#5 Nashville wind_gust \u2014 10 claims vs the stored calculation",
+          "passed": true,
+          "category": "numeric_agreement",
+          "expected": "all 10 extracted claims match their stored column, and the headline states the observed value",
+          "observed": "10/10 agree",
+          "detail": null
+        },
+        {
+          "id": "claims:2025-07-15_ca-regina-sk_temp_min@1.0.0",
+          "title": "#6 Regina temp_min \u2014 10 claims vs the stored calculation",
+          "passed": true,
+          "category": "numeric_agreement",
+          "expected": "all 10 extracted claims match their stored column, and the headline states the observed value",
+          "observed": "10/10 agree",
+          "detail": null
+        },
+        {
+          "id": "claims:2025-07-15_mx-cancun-roo_wind_gust@1.0.0",
+          "title": "#7 Canc\u00fan wind_gust \u2014 10 claims vs the stored calculation",
+          "passed": true,
+          "category": "numeric_agreement",
+          "expected": "all 10 extracted claims match their stored column, and the headline states the observed value",
+          "observed": "10/10 agree",
+          "detail": null
+        },
+        {
+          "id": "claims:2025-07-15_us-las-vegas-nv_precipitation@1.0.0",
+          "title": "#8 Las Vegas precipitation \u2014 9 claims vs the stored calculation",
+          "passed": true,
+          "category": "numeric_agreement",
+          "expected": "all 9 extracted claims match their stored column, and the headline states the observed value",
+          "observed": "9/9 agree",
+          "detail": null
+        },
+        {
+          "id": "claims:2025-07-15_mx-merida-yuc_temp_min@1.0.0",
+          "title": "#9 M\u00e9rida temp_min \u2014 9 claims vs the stored calculation",
+          "passed": true,
+          "category": "numeric_agreement",
+          "expected": "all 9 extracted claims match their stored column, and the headline states the observed value",
+          "observed": "9/9 agree",
+          "detail": null
+        },
+        {
+          "id": "claims:2025-07-15_us-phoenix-az_temp_max@1.0.0",
+          "title": "#10 Phoenix temp_max \u2014 9 claims vs the stored calculation",
+          "passed": true,
+          "category": "numeric_agreement",
+          "expected": "all 9 extracted claims match their stored column, and the headline states the observed value",
+          "observed": "9/9 agree",
+          "detail": null
+        },
+        {
+          "id": "direction_agreement",
+          "title": "No explanation states the opposite direction to its stored event",
+          "passed": true,
+          "category": "claim_agreement",
+          "expected": "0 of 10 explanations",
+          "observed": "0 of 10",
+          "detail": "a sign error is invisible to a citable-numbers check"
+        },
+        {
+          "id": "direction_stated",
+          "title": "Every explanation states the direction at all",
+          "passed": true,
+          "category": "claim_agreement",
+          "expected": "0 of 10 explanations",
+          "observed": "0 of 10",
+          "detail": "prose with no directional language cannot be checked for one"
+        },
+        {
+          "id": "bounded_probabilities_hedged",
+          "title": "Hedging matches whether the probability is on the sample-size floor",
+          "passed": true,
+          "category": "claim_agreement",
+          "expected": "0 of 10 explanations",
+          "observed": "0 of 10",
+          "detail": "a floored probability is a bound; stating it as a frequency overclaims"
+        },
+        {
+          "id": "no_unverified_record_claims",
+          "title": "No record claim appears outside an explicit negation",
+          "passed": true,
+          "category": "claim_agreement",
+          "expected": "0 of 10 explanations",
+          "observed": "0 of 10",
+          "detail": "no authoritative record source is implemented to verify one against"
+        },
+        {
+          "id": "modelled_data_not_called_an_observation",
+          "title": "No model-analysis estimate is described as an instrument reading",
+          "passed": true,
+          "category": "claim_agreement",
+          "expected": "0 of 10 explanations",
+          "observed": "0 of 10",
+          "detail": "the provider returns model analysis, not station observations"
+        },
+        {
+          "id": "z_score_withheld_when_invalid",
+          "title": "No normal-theory language where z_valid is false",
+          "passed": true,
+          "category": "claim_agreement",
+          "expected": "0 of 10 explanations",
+          "observed": "0 of 10",
+          "detail": "z-scores are not comparable across non-normal distributions"
+        },
+        {
+          "id": "required_claims_present",
+          "title": "Every explanation states the sample size and the tail probability",
+          "passed": true,
+          "category": "coverage",
+          "expected": "both of sample_size, tail_probability in each explanation",
+          "observed": "all 10 complete",
+          "detail": "These two carry the methodology. Dropping the word that anchors one of them would otherwise only lower the claim count, which is not a failure this suite would notice."
+        },
+        {
+          "id": "claim_extraction_not_vacuous",
+          "title": "Every explanation yielded at least 4 checkable claims",
+          "passed": true,
+          "category": "coverage",
+          "expected": "\u22654 extracted claims per explanation",
+          "observed": "all 10 above the floor",
+          "detail": "A pattern that matches nothing passes silently, which would make this whole suite decorative. This is the check that stops that."
+        }
+      ],
+      "cases_total": 18,
+      "cases_passed": 18,
+      "notes": [
+        "The claim extractors are written against the deterministic template's phrasing. A live model phrasing things differently would yield fewer extractable claims, which the coverage floor reports rather than hides.",
+        "Numeric agreement is exact at the precision the prose used: the stored value is rounded to the number of decimals printed and must then match."
+      ],
+      "error": null
+    },
+    {
       "id": "reproducibility",
       "title": "Pipeline reproducibility",
       "description": "Runs the pipeline repeatedly over one synthetic date \u2014 twice in one database and once in a fresh one \u2014 and compares every stored statistic. Also verifies that a failing run leaves the published board alone.",
       "status": "passed",
-      "duration_ms": 11767,
+      "duration_ms": 7353,
       "metrics": [
         {
           "label": "Cities analysed",
@@ -522,19 +1459,19 @@
         },
         {
           "label": "Baseline build",
-          "value": 7935,
+          "value": 7468,
           "unit": "ms",
           "detail": "18250 cached rows from 30 provider requests, done once rather than daily"
         },
         {
           "label": "Daily run end to end",
-          "value": 31,
+          "value": 33,
           "unit": "ms",
           "detail": "fetch, score, rank, explain, publish \u2014 against the synthetic provider and an in-memory database, so this is a floor, not a production figure"
         },
         {
           "label": "Fresh world build",
-          "value": 11732,
+          "value": 7321,
           "unit": "ms",
           "detail": null
         },
@@ -622,7 +1559,7 @@
       "title": "Public API contract",
       "description": "Exercises every public endpoint over the published board, then compares the served JSON against the stored calculations field by field.",
       "status": "passed",
-      "duration_ms": 221,
+      "duration_ms": 209,
       "metrics": [
         {
           "label": "Endpoints exercised",
@@ -638,13 +1575,13 @@
         },
         {
           "label": "Median response",
-          "value": 2.33,
+          "value": 2.1,
           "unit": "ms",
           "detail": "in-process client over in-memory SQLite; a floor for production, not a production measurement"
         },
         {
           "label": "Slowest response",
-          "value": 7.7,
+          "value": 8.75,
           "unit": "ms",
           "detail": null
         },
@@ -692,7 +1629,7 @@
           "passed": true,
           "category": "endpoint",
           "expected": "GET /health \u2192 200",
-          "observed": "200 in 7.7 ms",
+          "observed": "200 in 8.7 ms",
           "detail": null
         },
         {
@@ -710,7 +1647,7 @@
           "passed": true,
           "category": "endpoint",
           "expected": "GET /api/rankings/latest \u2192 200",
-          "observed": "200 in 4.4 ms",
+          "observed": "200 in 4.6 ms",
           "detail": null
         },
         {
@@ -719,7 +1656,7 @@
           "passed": true,
           "category": "endpoint",
           "expected": "GET /api/rankings/2025-07-15 \u2192 200",
-          "observed": "200 in 4.3 ms",
+          "observed": "200 in 5.0 ms",
           "detail": null
         },
         {
@@ -728,7 +1665,7 @@
           "passed": true,
           "category": "validation",
           "expected": "GET /api/rankings/not-a-date \u2192 422",
-          "observed": "422 in 1.0 ms",
+          "observed": "422 in 1.5 ms",
           "detail": null
         },
         {
@@ -737,7 +1674,7 @@
           "passed": true,
           "category": "endpoint",
           "expected": "GET /api/rankings \u2192 200",
-          "observed": "200 in 3.7 ms",
+          "observed": "200 in 6.9 ms",
           "detail": null
         },
         {
@@ -746,7 +1683,7 @@
           "passed": true,
           "category": "endpoint",
           "expected": "GET /api/cities \u2192 200",
-          "observed": "200 in 1.7 ms",
+          "observed": "200 in 2.1 ms",
           "detail": null
         },
         {
@@ -755,7 +1692,7 @@
           "passed": true,
           "category": "endpoint",
           "expected": "GET /api/cities/ca-calgary-ab \u2192 200",
-          "observed": "200 in 5.6 ms",
+          "observed": "200 in 5.5 ms",
           "detail": null
         },
         {
@@ -773,7 +1710,7 @@
           "passed": true,
           "category": "endpoint",
           "expected": "GET /api/cities/ca-calgary-ab/history \u2192 200",
-          "observed": "200 in 3.4 ms",
+          "observed": "200 in 2.5 ms",
           "detail": null
         },
         {
@@ -791,7 +1728,7 @@
           "passed": true,
           "category": "endpoint",
           "expected": "GET /api/events/2025-07-15_ca-calgary-ab_temp_max@1.0.0 \u2192 200",
-          "observed": "200 in 3.2 ms",
+          "observed": "200 in 2.4 ms",
           "detail": null
         },
         {
@@ -800,7 +1737,7 @@
           "passed": true,
           "category": "validation",
           "expected": "GET /api/events/not-an-event \u2192 404",
-          "observed": "404 in 1.4 ms",
+          "observed": "404 in 1.2 ms",
           "detail": null
         },
         {
@@ -845,7 +1782,7 @@
           "passed": true,
           "category": "read_only",
           "expected": "DELETE /api/rankings/latest \u2192 405",
-          "observed": "405 in 0.4 ms",
+          "observed": "405 in 0.2 ms",
           "detail": null
         },
         {
@@ -854,7 +1791,7 @@
           "passed": true,
           "category": "bounded_query",
           "expected": "GET /api/rankings \u2192 200",
-          "observed": "200 in 4.0 ms",
+          "observed": "200 in 2.1 ms",
           "detail": null
         },
         {
@@ -872,7 +1809,7 @@
           "passed": true,
           "category": "bounded_query",
           "expected": "GET /api/cities/ca-calgary-ab/history \u2192 200",
-          "observed": "200 in 2.3 ms",
+          "observed": "200 in 1.7 ms",
           "detail": null
         },
         {
@@ -940,6 +1877,7 @@
     "Every figure in this report was measured by the run that produced it. Nothing is hardcoded; a suite that cannot measure something reports null.",
     "The pipeline, API and published-explanation checks run against 'synthetic_fixture_v1', a deterministic synthetic weather provider. They measure whether the machinery is correct and reproducible, not the accuracy of real weather data.",
     "Latency figures come from an in-process client over an in-memory SQLite database. They are a floor for the deployed system, not a measurement of it.",
+    "The anomaly-score evaluator compares production against independent arithmetic in two regimes. Where the observation sits at or beyond the fifth order statistic from either end the stored quantile sketch is lossless and exact agreement is required. In the interior the sketch interpolates across its probability grid, so the two are only required to agree within the width of the grid interval that brackets the observation \u2014 a property of the interpolation, not a tolerance chosen to make the run pass. The measured worst case is reported either way.",
     "Grounding accuracy is measured on a small hand-labelled case set. It quantifies the guards, not any language model's general reliability.",
     "LLM spend is an estimate derived from configured token prices. When no prices are configured it reads 0.0, which means 'not priced' rather than 'free'.",
     "The city registry is a curated sample of major North American cities. It is not a representative sample of the continent's climate, and the rankings are statistical outliers within that sample rather than records of any kind."

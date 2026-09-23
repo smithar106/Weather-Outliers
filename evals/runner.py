@@ -9,7 +9,7 @@ for the evaluation dashboard.
 The order of operations matters and is not negotiable: the environment is pinned
 *before* anything from ``app`` is imported, so a developer's ``.env`` cannot point
 the evaluation at a real database or a paid model. Every suite import is therefore
-deferred into :func:`main`.
+deferred into :func:`execute`, which :func:`main` calls once the pins are in place.
 """
 
 from __future__ import annotations
@@ -44,6 +44,14 @@ LIMITATIONS: tuple[str, ...] = (
     "of real weather data.",
     "Latency figures come from an in-process client over an in-memory SQLite "
     "database. They are a floor for the deployed system, not a measurement of it.",
+    "The anomaly-score evaluator compares production against independent arithmetic "
+    "in two regimes. Where the observation sits at or beyond the fifth order "
+    "statistic from either end the stored quantile sketch is lossless and exact "
+    "agreement is required. In the interior the sketch interpolates across its "
+    "probability grid, so the two are only required to agree within the width of the "
+    "grid interval that brackets the observation — a property of the interpolation, "
+    "not a tolerance chosen to make the run pass. The measured worst case is "
+    "reported either way.",
     "Grounding accuracy is measured on a small hand-labelled case set. It "
     "quantifies the guards, not any language model's general reliability.",
     "LLM spend is an estimate derived from configured token prices. When no prices "
@@ -80,6 +88,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--judge",
+        action="store_true",
+        help=(
+            "Additionally run the optional model-based explanation-quality evaluator. "
+            "Keeps the model API keys in the environment but still generates the "
+            "explanations from templates, so the only paid call is the judging. "
+            "Costs money."
+        ),
+    )
+    parser.add_argument(
         "--skip-unit-tests",
         action="store_true",
         help="Skip the pytest suite. Useful while iterating on the other suites.",
@@ -93,7 +111,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _print_summary(report: Report) -> None:
+def print_summary(report: Report) -> None:
     payload = report.to_dict()
     totals = payload["totals"]
 
@@ -123,8 +141,7 @@ def _print_summary(report: Report) -> None:
         for case in suite["cases"]:
             if not case["passed"]:
                 print(
-                    f"        · {case['id']}: "
-                    f"expected {case['expected']}, got {case['observed']}"
+                    f"        · {case['id']}: expected {case['expected']}, got {case['observed']}"
                 )
         for note in suite["notes"]:
             print(f"        note: {note}")
@@ -138,28 +155,66 @@ def _print_summary(report: Report) -> None:
     print()
 
 
-def main(argv: list[str] | None = None) -> int:
-    args = parse_args(argv)
-    environment.configure(live_llm=args.live_llm)
+def execute(
+    *,
+    judge: bool = False,
+    skip_unit_tests: bool = False,
+    only: list[str] | None = None,
+    verdict_path: Path | None = None,
+) -> Report | None:
+    """Run the selected suites and return the report.
 
+    ``None`` means the scratch world could not publish a board, which is a setup
+    failure rather than an evaluation result — there is nothing to report on.
+
+    Separate from :func:`main` so ``python -m evals.experiment`` can run exactly
+    the same suites and then log them, instead of shelling out to this module and
+    parsing its output back.
+
+    The caller must have run :func:`evals.environment.configure` already.
+    """
     # Imported here, not at module scope: they pull in ``app``, which must not be
-    # imported before the environment above is pinned.
+    # imported before the environment is pinned.
     from app.domain import METHODOLOGY_VERSION
     from app.providers.fixture import DATASET
-    from evals.suites import api_contract, grounding, reproducibility, unit_tests
+    from evals.suites import (
+        anomaly_score,
+        api_contract,
+        explanation_agreement,
+        explanation_quality,
+        grounding,
+        missing_data,
+        ranking,
+        reproducibility,
+        unit_tests,
+    )
     from evals.world import build_world
 
-    wanted = set(args.only or [])
+    wanted = set(only or [])
 
     def selected(suite_id: str) -> bool:
         return not wanted or suite_id in wanted
 
     suites: list[Suite] = []
 
-    if selected(unit_tests.SUITE_ID) and not args.skip_unit_tests:
+    if selected(unit_tests.SUITE_ID) and not skip_unit_tests:
         suites.append(unit_tests.run())
 
-    world_suites = (grounding.SUITE_ID, reproducibility.SUITE_ID, api_contract.SUITE_ID)
+    # Neither of these needs a database — they score generated baselines directly,
+    # so they run before the scratch world exists and still report if building it
+    # fails.
+    if selected(anomaly_score.SUITE_ID):
+        suites.append(anomaly_score.run())
+    if selected(missing_data.SUITE_ID):
+        suites.append(missing_data.run())
+
+    world_suites = (
+        grounding.SUITE_ID,
+        reproducibility.SUITE_ID,
+        api_contract.SUITE_ID,
+        ranking.SUITE_ID,
+        explanation_agreement.SUITE_ID,
+    ) + ((explanation_quality.SUITE_ID,) if judge else ())
     needs_world = any(selected(sid) for sid in world_suites)
     world = build_world() if needs_world else None
 
@@ -167,10 +222,19 @@ def main(argv: list[str] | None = None) -> int:
         if world.run_report is None or world.run_report.status != "succeeded":
             detail = world.run_report.error if world.run_report else "no run report"
             print(f"scratch world could not publish a board: {detail}", file=sys.stderr)
-            return 2
+            world.dispose()
+            return None
 
+        if selected(ranking.SUITE_ID):
+            suites.append(ranking.run(world))
         if selected(grounding.SUITE_ID):
             suites.append(grounding.run(world, llm_mode=environment.llm_mode()))
+        if selected(explanation_agreement.SUITE_ID):
+            suites.append(explanation_agreement.run(world))
+        # Optional and off by default: the only suite in the harness that spends
+        # money, and the only one whose result is an opinion.
+        if judge and selected(explanation_quality.SUITE_ID):
+            suites.append(explanation_quality.run(world, verdict_path=verdict_path))
         if selected(reproducibility.SUITE_ID):
             suites.append(reproducibility.run(world))
         # Last, because it redirects ``app.db`` at the scratch engine for the rest
@@ -192,17 +256,36 @@ def main(argv: list[str] | None = None) -> int:
         limitations=list(LIMITATIONS),
     )
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(
+    if world is not None:
+        world.dispose()
+
+    return report
+
+
+def write_report(report: Report, output: Path) -> None:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(
         json.dumps(report.to_dict(), indent=2, sort_keys=False) + "\n", encoding="utf-8"
     )
 
-    _print_summary(report)
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    environment.configure(live_llm=args.live_llm, keep_keys=args.judge)
+
+    report = execute(
+        judge=args.judge,
+        skip_unit_tests=args.skip_unit_tests,
+        only=args.only,
+        verdict_path=args.output.with_name("judge-verdicts.json"),
+    )
+    if report is None:
+        return 2
+
+    write_report(report, args.output)
+    print_summary(report)
     print(f"  report written to {args.output}")
     print()
-
-    if world is not None:
-        world.dispose()
 
     return 0 if report.status == STATUS_PASSED else 1
 

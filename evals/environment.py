@@ -30,8 +30,14 @@ BACKEND = REPO_ROOT / "backend"
 SCRATCH_DATABASE_URL = "sqlite+pysqlite:///:memory:"
 
 
-def configure(*, live_llm: bool = False) -> None:
-    """Prepare the interpreter. Call once, before importing anything from ``app``."""
+def configure(*, live_llm: bool = False, keep_keys: bool = False) -> None:
+    """Prepare the interpreter. Call once, before importing anything from ``app``.
+
+    ``keep_keys`` leaves the model API keys in the environment while still pinning
+    ``LLM_PROVIDER`` to ``none``. That is the combination the optional judge needs:
+    the explanations under review are the deterministic templates, and the only
+    paid call in the run is the judging itself.
+    """
     if str(BACKEND) not in sys.path:
         sys.path.insert(0, str(BACKEND))
 
@@ -48,8 +54,9 @@ def configure(*, live_llm: bool = False) -> None:
         return
 
     os.environ["LLM_PROVIDER"] = "none"
-    for key in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY"):
-        os.environ.pop(key, None)
+    if not keep_keys:
+        for key in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY"):
+            os.environ.pop(key, None)
 
 
 def llm_mode() -> str:

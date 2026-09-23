@@ -1,0 +1,39 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "_comment": [
+    "Build and deploy configuration for the private MLflow tracking server.",
+    "",
+    "Set the service's root directory to `ops/mlflow`. That makes this directory the",
+    "build context, so Railway finds ops/mlflow/Dockerfile at the root of it and",
+    "reads this file rather than the repository root's railway.json, which builds",
+    "the backend image. Same arrangement as frontend/.",
+    "",
+    "Two settings are NOT config-as-code and have to be set on the service, because",
+    "Railway has no schema for either:",
+    "",
+    "  1. A volume mounted at /data. Without it the artifact directory lives in the",
+    "     container filesystem and every report attached to a run is lost on the",
+    "     next deploy. The tracking metadata survives regardless — that is in",
+    "     PostgreSQL — which is exactly the failure mode that looks fine until",
+    "     someone clicks an artifact.",
+    "  2. No public domain. MLflow's open-source server has no authentication of",
+    "     its own, so a generated domain would publish every trace. The service is",
+    "     reachable at mlflow.railway.internal:5000 over private networking and",
+    "     nowhere else. The entrypoint refuses to start unless basic auth",
+    "     credentials are set or MLFLOW_ALLOW_ANONYMOUS=true states the choice",
+    "     out loud.",
+    "",
+    "See docs/deployment.md and EVALUATION.md."
+  ],
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
+  },
+  "deploy": {
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 120,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 5,
+    "numReplicas": 1
+  }
+}

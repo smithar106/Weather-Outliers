@@ -45,10 +45,17 @@ WORKDIR /app
 # site-packages/app/__init__.py silently wins over /app/app. The container then builds
 # perfectly and dies on `Error loading ASGI app. Could not import module "app.main"`.
 # That shipped once. The find_spec assertion is here so it cannot ship twice.
+#
+# The `[tracing]` extra installs `mlflow-skinny`, the tracking client. It is here
+# so the scheduled workers can send traces to the private MLflow service; it is
+# inert until MLFLOW_TRACING_ENABLED is true, and `app.observability.tracing` is
+# written so that its absence is not an error. Skinny, not `mlflow`: the full
+# distribution would add pandas, numpy, scipy and Flask to an image that serves an
+# API. The tracking *server* is a separate image — see ops/mlflow/.
 COPY backend/pyproject.toml ./pyproject.toml
 RUN mkdir -p app \
     && touch app/__init__.py \
-    && pip install --no-cache-dir . \
+    && pip install --no-cache-dir ".[tracing]" \
     && rm -rf app "$(python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')/app" \
     && python -c "import importlib.util, sys; sys.exit(None if importlib.util.find_spec('app') is None else 'a stub app package survived the dependency layer and would shadow /app/app at runtime')"
 

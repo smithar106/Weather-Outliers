@@ -36,9 +36,12 @@ dev = [
 # Alembic's own pinned range, and this backend deliberately has none of those
 # (see the note above the runtime dependencies). Skinny carries the tracking
 # client, the tracing SDK and the fluent API, which is everything this project
-# calls. Kept out of the base set so the deployed image never installs it: the
-# application does not need MLflow to run, and `app.observability.tracing`
-# degrades to no-ops when it is absent.
+# calls. It is an extra rather than a runtime dependency because the application
+# does not need MLflow to run: `app.observability.tracing` degrades to no-ops when
+# it is absent, and every test of that path runs without it installed. The deployed
+# image does install the extra, so the scheduled workers can reach the private
+# tracking server; tracing still stays off until MLFLOW_TRACING_ENABLED says
+# otherwise.
 tracing = [
     "mlflow-skinny>=2.19,<4.0",
 ]

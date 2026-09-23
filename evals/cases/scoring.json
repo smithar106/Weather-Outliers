@@ -1,0 +1,302 @@
+{
+  "schema_version": 1,
+  "dataset_version": "scoring-1.0.0",
+  "description": "Cases for the anomaly-scoring and missing-data evaluators. Baseline samples are generated from the seeded recipes below rather than stored as tens of thousands of literals: the recipe is the versioned artefact, and it reproduces the same floats on every machine because the generators use only random.Random(seed).random() plus arithmetic, never a library distribution whose implementation may change. Changing any 'sample' block, 'observed' rule or 'expect' block is a dataset change and requires bumping dataset_version.",
+  "notes": [
+    "n = 450 is what the real pipeline sees: a 15-day seasonal window over a 30-year reference period.",
+    "'observed' is expressed as a rule against the generated sample wherever the point of the case is a position in the distribution (the sample maximum, the fifth-largest value, the 90th percentile). Hard-coding a float there would have hidden the intent and broken silently if a recipe were ever retuned.",
+    "Distribution parameters are plausible rather than fitted. No case claims to describe a real city, and no number here is presented as a measurement."
+  ],
+  "defaults": {
+    "window_days": 7,
+    "n_years": 30,
+    "reference_start_year": 1991,
+    "reference_end_year": 2020,
+    "source_dataset": "synthetic_eval_v1"
+  },
+  "cases": [
+    {
+      "id": "rep_temp_max_p90",
+      "category": "representative",
+      "title": "Warm but unremarkable daily maximum",
+      "metric": "temp_max",
+      "sample": { "kind": "normal", "n": 450, "seed": 101, "mean": 28.0, "sd": 3.0 },
+      "observed": { "rule": "quantile", "p": 0.9 },
+      "expect": { "eligible": true, "direction": "above", "bounded": false, "beyond_sample": false }
+    },
+    {
+      "id": "rep_temp_max_median",
+      "category": "representative",
+      "title": "A completely ordinary day, which must not reach the board",
+      "metric": "temp_max",
+      "sample": { "kind": "normal", "n": 450, "seed": 102, "mean": 28.0, "sd": 3.0 },
+      "observed": { "rule": "quantile", "p": 0.5 },
+      "expect": { "eligible": false, "excluded_reason": "below_score_threshold" },
+      "note": "The single most important negative case in the set. A median day scores about 0.30, under the 0.5 publication floor, so the ranking is not merely ordering noise on quiet days — it declines to publish it."
+    },
+    {
+      "id": "rep_temp_min_p99",
+      "category": "representative",
+      "title": "Unusually warm overnight minimum",
+      "metric": "temp_min",
+      "sample": { "kind": "normal", "n": 450, "seed": 202, "mean": 16.0, "sd": 2.5 },
+      "observed": { "rule": "quantile", "p": 0.99 },
+      "expect": { "eligible": true, "direction": "above" }
+    },
+    {
+      "id": "rep_temp_mean_cold_tail",
+      "category": "representative",
+      "title": "Cold anomaly, exercising the lower tail",
+      "metric": "temp_mean",
+      "sample": { "kind": "normal", "n": 450, "seed": 303, "mean": 22.0, "sd": 2.8 },
+      "observed": { "rule": "quantile", "p": 0.02 },
+      "expect": { "eligible": true, "direction": "below" },
+      "note": "Temperature is two-tailed: a cold day is as much an outlier as a hot one, and must be scored on the same scale rather than discarded."
+    },
+    {
+      "id": "rep_precip_wet_climate",
+      "category": "representative",
+      "title": "Heavy rain in a climate that rains often",
+      "metric": "precipitation",
+      "sample": {
+        "kind": "zero_inflated_gamma",
+        "n": 450,
+        "seed": 404,
+        "wet_probability": 0.45,
+        "shape": 2,
+        "scale": 4.0
+      },
+      "observed": { "rule": "wet_order_stat_from_top", "index": 3 },
+      "expect": { "eligible": true, "direction": "above" }
+    },
+    {
+      "id": "rep_wind_gust_p98",
+      "category": "representative",
+      "title": "Strong gust, upper tail only",
+      "metric": "wind_gust",
+      "sample": { "kind": "gamma", "n": 450, "seed": 505, "shape": 3, "scale": 8.0 },
+      "observed": { "rule": "quantile", "p": 0.98 },
+      "expect": { "eligible": true, "direction": "above" },
+      "note": "Gusts are right-skewed, so a z-score is reported for familiarity but must be flagged as not comparable across metrics."
+    },
+
+    {
+      "id": "edge_equals_sample_max",
+      "category": "edge",
+      "title": "Exactly equals the reference-period maximum",
+      "metric": "temp_max",
+      "sample": { "kind": "normal", "n": 450, "seed": 111, "mean": 30.0, "sd": 3.2 },
+      "observed": { "rule": "order_stat_from_top", "index": 1 },
+      "expect": {
+        "eligible": true,
+        "bounded": true,
+        "beyond_sample": false,
+        "out_of_sample_margin": 0.0
+      },
+      "note": "The probability floor binds here, so the published figure is a bound and the prose must say 'at least this rare'. The margin term is zero because the value ties the record rather than clearing it."
+    },
+    {
+      "id": "edge_above_sample_max",
+      "category": "edge",
+      "title": "Clears the reference-period maximum outright",
+      "metric": "temp_max",
+      "sample": { "kind": "normal", "n": 450, "seed": 112, "mean": 30.0, "sd": 3.2 },
+      "observed": { "rule": "above_max", "by": 1.5 },
+      "expect": { "eligible": true, "bounded": true, "beyond_sample": true },
+      "note": "Same floored probability as the case above, so only the margin term separates them. That is the whole reason the margin term exists."
+    },
+    {
+      "id": "edge_below_sample_min",
+      "category": "edge",
+      "title": "Colder than anything in the reference sample",
+      "metric": "temp_min",
+      "sample": { "kind": "normal", "n": 450, "seed": 113, "mean": 5.0, "sd": 4.0 },
+      "observed": { "rule": "below_min", "by": 2.0 },
+      "expect": {
+        "eligible": true,
+        "direction": "below",
+        "bounded": true,
+        "beyond_sample": true
+      }
+    },
+    {
+      "id": "edge_fifth_order_stat",
+      "category": "edge",
+      "title": "Sits exactly on the retained-tail boundary",
+      "metric": "temp_max",
+      "sample": { "kind": "normal", "n": 450, "seed": 114, "mean": 27.0, "sd": 3.0 },
+      "observed": { "rule": "order_stat_from_top", "index": 5 },
+      "expect": { "eligible": true, "in_exact_tail": true },
+      "note": "Production keeps the five most extreme order statistics verbatim, so at the fifth the sketch is still lossless and agreement with the reference must be exact."
+    },
+    {
+      "id": "edge_sixth_order_stat",
+      "category": "edge",
+      "title": "One step inside the sketch's interpolated region",
+      "metric": "temp_max",
+      "sample": { "kind": "normal", "n": 450, "seed": 115, "mean": 27.0, "sd": 3.0 },
+      "observed": { "rule": "order_stat_from_top", "index": 6 },
+      "expect": { "eligible": true, "in_exact_tail": false },
+      "note": "The companion to the case above, and the reason this suite reports a measured sketch discrepancy instead of asserting zero everywhere. Here the sketch interpolates across a grid gap, so a small difference from the exact-sample reference is correct behaviour, not a defect."
+    },
+    {
+      "id": "edge_constant_baseline",
+      "category": "edge",
+      "title": "Degenerate baseline: every reference value identical",
+      "metric": "temp_max",
+      "sample": { "kind": "constant", "n": 450, "value": 21.0 },
+      "observed": 25.0,
+      "expect": {
+        "eligible": true,
+        "bounded": true,
+        "beyond_sample": true,
+        "out_of_sample_margin": 0.0,
+        "robust_deviation_is_null": true
+      },
+      "note": "IQR and standard deviation are both zero, so the margin has no scale to be expressed in and must degrade to zero rather than dividing by it. Physically implausible; arithmetically reachable, which is what matters."
+    },
+    {
+      "id": "edge_precip_dry_climate",
+      "category": "edge",
+      "title": "Heavy rain where it almost never rains",
+      "metric": "precipitation",
+      "sample": {
+        "kind": "zero_inflated_gamma",
+        "n": 450,
+        "seed": 606,
+        "wet_probability": 0.06,
+        "shape": 2,
+        "scale": 3.0
+      },
+      "observed": { "rule": "above_wet_max", "by": 10.0 },
+      "expect": { "eligible": true, "beyond_sample": true },
+      "note": "The case the zero-inflated mixture exists for. Treated as one continuous variable, the dry mass would drag the estimate and badly understate how unusual this is."
+    },
+    {
+      "id": "edge_precip_zero_observed",
+      "category": "edge",
+      "title": "A dry day is not an upper-tail event",
+      "metric": "precipitation",
+      "sample": {
+        "kind": "zero_inflated_gamma",
+        "n": 450,
+        "seed": 607,
+        "wet_probability": 0.4,
+        "shape": 2,
+        "scale": 5.0
+      },
+      "observed": 0.0,
+      "expect": {
+        "eligible": false,
+        "excluded_reason": "dry_day_not_ranked",
+        "tail_probability": 1.0
+      },
+      "note": "Dry spells are a multi-day question and out of scope for a daily metric, so zero rainfall is excluded by name rather than scored as a lower-tail outlier."
+    },
+
+    {
+      "id": "fail_no_baseline",
+      "category": "synthetic_failure",
+      "title": "No cached baseline for this city, metric and day",
+      "metric": "temp_max",
+      "sample": { "kind": "none" },
+      "observed": 31.0,
+      "expect": { "eligible": false, "excluded_reason": "no_baseline" },
+      "note": "Must produce an inspectable exclusion, not a silent drop and not a score computed against nothing."
+    },
+    {
+      "id": "fail_empty_sample",
+      "category": "synthetic_failure",
+      "title": "Baseline row exists but its sample is empty",
+      "metric": "temp_max",
+      "sample": { "kind": "empty" },
+      "observed": 31.0,
+      "expect": { "eligible": false, "excluded_reason": "no_baseline" }
+    },
+    {
+      "id": "fail_insufficient_samples",
+      "category": "synthetic_failure",
+      "title": "Too few reference values to estimate a tail",
+      "metric": "temp_max",
+      "sample": { "kind": "normal", "n": 100, "seed": 121, "mean": 28.0, "sd": 3.0 },
+      "observed": { "rule": "above_max", "by": 1.0 },
+      "expect": { "eligible": false, "excluded_reason": "insufficient_baseline" },
+      "note": "100 < the 120-sample floor. The value would score highly if scored, which is exactly why the gate has to come first."
+    },
+    {
+      "id": "fail_insufficient_years",
+      "category": "synthetic_failure",
+      "title": "Enough values, drawn from too few years",
+      "metric": "temp_max",
+      "n_years": 10,
+      "sample": { "kind": "normal", "n": 450, "seed": 122, "mean": 28.0, "sd": 3.0 },
+      "observed": { "rule": "above_max", "by": 1.0 },
+      "expect": { "eligible": false, "excluded_reason": "insufficient_baseline" },
+      "note": "Sample count alone is not enough: 450 values from 10 years cannot resolve a 1-in-30-year tail, however many of them there are."
+    },
+    {
+      "id": "fail_precip_too_few_wet_days",
+      "category": "synthetic_failure",
+      "title": "Almost no wet days in the reference window",
+      "metric": "precipitation",
+      "sample": {
+        "kind": "zero_inflated_gamma",
+        "n": 450,
+        "seed": 707,
+        "wet_probability": 0.02,
+        "shape": 2,
+        "scale": 3.0
+      },
+      "observed": { "rule": "above_wet_max", "by": 5.0 },
+      "expect": { "eligible": false, "excluded_reason": "insufficient_baseline" },
+      "note": "Expects 'insufficient_baseline' rather than 'insufficient_wet_days' on purpose. The baseline builder folds the wet-day floor into the 'sufficient' flag, so that broader gate fires first. Recorded as observed behaviour, not asserted as the nicer of the two names."
+    },
+    {
+      "id": "fail_precip_wet_day_floor_raised",
+      "category": "synthetic_failure",
+      "title": "Wet-day floor raised above the value used when the baseline was built",
+      "metric": "precipitation",
+      "min_wet_days_override": 200,
+      "sample": {
+        "kind": "zero_inflated_gamma",
+        "n": 450,
+        "seed": 708,
+        "wet_probability": 0.3,
+        "shape": 2,
+        "scale": 5.0
+      },
+      "observed": { "rule": "wet_order_stat_from_top", "index": 2 },
+      "expect": { "eligible": false, "excluded_reason": "insufficient_wet_days" },
+      "note": "The only route by which 'insufficient_wet_days' is reachable, and the reason it is still worth having: a caller that demands a stricter floor than the stored baseline was built to must be refused rather than served."
+    },
+    {
+      "id": "fail_observed_missing",
+      "category": "synthetic_failure",
+      "title": "Observation absent",
+      "metric": "temp_max",
+      "sample": { "kind": "normal", "n": 450, "seed": 131, "mean": 28.0, "sd": 3.0 },
+      "observed": null,
+      "expect": { "returns_none": true },
+      "note": "Nothing to score, so nothing is returned — as distinct from a baseline problem, which produces a named exclusion."
+    },
+    {
+      "id": "fail_observed_not_finite",
+      "category": "synthetic_failure",
+      "title": "Observation is NaN",
+      "metric": "temp_max",
+      "sample": { "kind": "normal", "n": 450, "seed": 132, "mean": 28.0, "sd": 3.0 },
+      "observed": "nan",
+      "expect": { "returns_none": true },
+      "note": "A NaN that reached the scorer would propagate through every comparison and silently sort anywhere, so it has to be refused at the door."
+    },
+    {
+      "id": "fail_below_score_threshold",
+      "category": "synthetic_failure",
+      "title": "Scores just under the publication floor",
+      "metric": "temp_max",
+      "sample": { "kind": "normal", "n": 450, "seed": 133, "mean": 28.0, "sd": 3.0 },
+      "observed": { "rule": "quantile", "p": 0.55 },
+      "expect": { "eligible": false, "excluded_reason": "below_score_threshold" }
+    }
+  ]
+}

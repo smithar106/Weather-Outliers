@@ -77,6 +77,15 @@ evals/reports/*.json
 # manifest.json records which provider produced the data behind each capture, so a
 # committed image cannot quietly misrepresent fixture data as real weather.
 
+# ---- MLflow (local only; the tracking store is never committed) ----
+# The default local backend store and the artifact directory MLflow creates beside
+# it. Both are machine-local telemetry, they can hold prompt and response text, and
+# nothing in the application reads them.
+mlflow.db
+mlflow.db-journal
+mlruns/
+mlartifacts/
+
 # ---- Editors / OS ----
 .DS_Store
 Thumbs.db

@@ -212,10 +212,10 @@ Everything below is a measured figure from this repository, not an estimate.
 
 ```
 ruff check backend evals          All checks passed
-pytest                            255 passed
+pytest                            270 passed
 tsc --noEmit                      clean
 eslint .                          clean
-python -m evals.runner            4/4 suites, 62/62 checks, PASSED
+python -m evals.runner            8/8 suites, 138/138 checks, PASSED
 ```
 
 CI additionally builds both container images and smoke-tests them: that the backend
@@ -225,14 +225,23 @@ rather than to an installed copy of it, and that the website container answers H
 own entrypoint is a deploy that restart-loops, and that happened here once.
 
 The evaluation harness (`python -m evals.runner`, report committed at
-`evals/reports/latest.json` and rendered at `/evaluation`) runs four suites:
+`evals/reports/latest.json` and rendered at `/evaluation`) runs eight suites.
+`EVALUATION.md` defines each evaluator, the dataset, and the limitations.
 
 | Suite | Checks | What it establishes |
 | --- | --- | --- |
-| `unit_tests` | 5 | The statistics match independently computed expected values. |
+| `unit_tests` | 6 | 270 pytest tests pass, and the statistics match independently computed expected values. |
+| `anomaly_score` | 24 | Anomaly scores match arithmetic written independently of the pipeline, over a 23-case dataset and a 999-point sweep. |
+| `missing_data` | 18 | Absent, partial and unusable data are excluded with a stated reason rather than scored. |
+| `ranking` | 15 | The top-10 board is correct and order-independent: all five tie-break links decided, 25 shuffles identical, and the published board re-derived by an independent selector. |
 | `grounding` | 25 | Every published explanation's factual claims trace to tool results the agent actually received. Fabricated figures are rejected. |
+| `explanation_agreement` | 18 | Every number printed in an explanation equals the stored calculation at the precision printed — 96 claims checked. |
 | `reproducibility` | 5 | Re-running the same date produces a byte-identical ranking. |
 | `api_contract` | 27 | Every documented endpoint returns its documented schema. |
+
+A ninth, `explanation_quality`, is an optional model-based judge behind
+`--judge`. It costs money, its scores are reported as metrics and never asserted,
+and it is skipped — visibly, in the report — when no key is configured.
 
 The report records its own caveats rather than leaving them to a reader: a run
 without an LLM key states that it measured the guards and the deterministic
