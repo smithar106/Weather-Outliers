@@ -258,6 +258,19 @@ jobs:
             exit 1
           fi
 
+          # The entrypoint starts as root so it can chown the mounted volume, then
+          # drops to uid 10001 before exec'ing the server. It falls back to running as
+          # root if setpriv is missing, which is the safe failure but not the intent,
+          # so the uid is read out of the running process rather than assumed.
+          uid=$(docker exec mlflow sh -c 'grep ^Uid: /proc/1/status' | tr -s '\t ' ' ' | cut -d' ' -f2)
+          echo "server pid 1 runs as uid $uid"
+          if [ "$uid" = "0" ]; then
+            echo "the server is running as root; setpriv did not take effect"
+            docker logs mlflow
+            docker rm -f mlflow >/dev/null
+            exit 1
+          fi
+
           # experiments/search rather than a get-by-name: it is a real API route that
           # returns 200 whether or not any experiment exists yet, so the status codes
           # below are about authorization and nothing else.
