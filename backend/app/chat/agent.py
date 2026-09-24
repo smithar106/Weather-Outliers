@@ -164,10 +164,10 @@ def _parse_plan(text: str | None) -> dict[str, Any]:
 
 
 def answer_agent_question(
-    question: str, *, client: Any, settings: Settings, limit: int = 20
+    question: str, *, client: Any, settings: Settings, since_days: int = 30
 ) -> dict[str, Any]:
-    """Answer a question about the agentic flow from the recent MLflow traces."""
-    data = monitoring.recent_trace_data(settings, limit=limit)
+    """Answer a question about the agentic flow from aggregated MLflow trace data."""
+    data = monitoring.trace_analytics(settings, since_days=since_days)
 
     if not data["available"]:
         return {
@@ -177,27 +177,25 @@ def answer_agent_question(
             "answer": f"Trace data is not available: {data['note']}",
         }
 
-    traces = data["traces"]
-    if not traces:
+    if data.get("traces", 0) == 0:
         return {
             "available": True,
-            "note": data["note"],
+            "note": data.get("note"),
             "trace_count": 0,
-            "answer": "No traces have been recorded yet, so there is nothing to report on the "
-            "agent's recent runs.",
+            "answer": "No traces have been recorded in this window, so there is nothing to report.",
         }
 
-    payload = json.dumps(traces, default=str)
+    payload = json.dumps(data, default=str)
     response = client.complete(
         system=build_agent_system_prompt(),
-        turns=[Turn(role="user", text=f"Question: {question}\n\nRecent traces:\n{payload}")],
+        turns=[Turn(role="user", text=f"Question: {question}\n\nTrace analytics:\n{payload}")],
         tools=[],
-        max_tokens=600,
+        max_tokens=700,
     )
     text = (getattr(response, "text", None) or "").strip()
     return {
         "available": True,
         "note": None,
-        "trace_count": len(traces),
-        "answer": text or f"{len(traces)} traces found — see the monitor page for detail.",
+        "trace_count": data.get("traces", 0),
+        "answer": text or "Trace analytics computed — see the monitor page for detail.",
     }

@@ -13,6 +13,7 @@ record a field, degrades to a ``None`` rather than raising.
 
 from __future__ import annotations
 
+import time
 from collections.abc import Mapping
 from typing import Any
 
@@ -349,4 +350,138 @@ def agent_status(settings: Settings, limit: int = 10) -> dict[str, Any]:
         "label": label,
         "detail": detail,
         "runs": len(daily),
+    }
+
+
+def trace_analytics(
+    settings: Settings, *, since_days: int = 30, limit: int = 300
+) -> dict[str, Any]:
+    """Aggregated trace analytics over a window, for the agent to answer questions.
+
+    Aggregation is done here in Python — counts, averages and maxima — rather than
+    left to the model, so the answer's numbers are exact and reproducible.
+    """
+    mlflow, note = _mlflow(settings)
+    if mlflow is None:
+        return {"available": False, "note": note}
+
+    try:
+        experiment = mlflow.get_experiment_by_name(settings.mlflow_experiment)
+    except Exception as exc:  # pragma: no cover
+        return {"available": False, "note": f"cannot reach the tracking store: {exc}"}
+    if experiment is None:
+        return {"available": True, "note": "no traces yet", "traces": 0, "runs": 0}
+
+    since_ms = int(time.time() * 1000) - since_days * 86_400_000
+    try:
+        traces = mlflow.search_traces(
+            locations=[experiment.experiment_id],
+            filter_string=f"trace.timestamp_ms >= {since_ms}",
+            max_results=limit,
+            include_spans=True,
+            return_type="list",
+        )
+    except Exception as exc:  # pragma: no cover
+        return {"available": False, "note": f"cannot list traces: {exc}"}
+
+    normalized = [_normalize_trace(trace) for trace in traces]
+
+    span_buckets: dict[str, dict[str, Any]] = {}
+    errors: list[dict[str, Any]] = []
+    fallbacks: list[dict[str, Any]] = []
+    generator = {"llm": 0, "template": 0}
+    tokens = {"prompt": 0, "completion": 0}
+    cost = 0.0
+    runs: list[dict[str, Any]] = []
+
+    for trace in normalized:
+        root = trace["spans"][0] if trace["spans"] else {}
+        root_attrs = root.get("attributes", {})
+        if trace.get("root_span") == "pipeline.run_daily":
+            runs.append(
+                {
+                    "run_id": trace.get("run_id"),
+                    "timestamp_ms": trace.get("timestamp_ms"),
+                    "status": trace.get("status"),
+                    "duration_ms": trace.get("duration_ms"),
+                    "events_published": root_attrs.get("events_published"),
+                    "llm_calls": root_attrs.get("llm_calls"),
+                    "completeness": root_attrs.get("completeness"),
+                }
+            )
+
+        for span in trace["spans"]:
+            name = span["name"]
+            latency = span.get("latency_ms")
+            bucket = span_buckets.setdefault(
+                name, {"name": name, "count": 0, "total_ms": 0, "max_ms": 0, "errors": 0}
+            )
+            bucket["count"] += 1
+            if latency is not None:
+                bucket["total_ms"] += latency
+                bucket["max_ms"] = max(bucket["max_ms"], latency)
+            if span.get("status") == "ERROR":
+                bucket["errors"] += 1
+                attrs = span.get("attributes", {})
+                errors.append(
+                    {
+                        "span": name,
+                        "run_id": trace.get("run_id"),
+                        "city": attrs.get("city_id"),
+                        "error": attrs.get("error_message") or attrs.get("error_type"),
+                    }
+                )
+
+            attrs = span.get("attributes", {})
+            if span.get("name") == "explain_event":
+                gen = attrs.get("generator")
+                if gen == "llm":
+                    generator["llm"] += 1
+                elif gen == "template":
+                    generator["template"] += 1
+                if attrs.get("fallback_reason"):
+                    fallbacks.append(
+                        {
+                            "city": attrs.get("city_id"),
+                            "metric": attrs.get("metric"),
+                            "reason": attrs.get("fallback_reason"),
+                        }
+                    )
+
+            token_pairs = (("prompt", "prompt_tokens"), ("completion", "completion_tokens"))
+            for token_key, attr_key in token_pairs:
+                value = attrs.get(attr_key)
+                if isinstance(value, (int, float)):
+                    tokens[token_key] += int(value)
+            usd = attrs.get("estimated_usd")
+            if isinstance(usd, (int, float)):
+                cost += float(usd)
+
+    spans = []
+    for bucket in span_buckets.values():
+        spans.append(
+            {
+                "name": bucket["name"],
+                "count": bucket["count"],
+                "avg_ms": round(bucket["total_ms"] / bucket["count"]) if bucket["count"] else None,
+                "max_ms": bucket["max_ms"],
+                "errors": bucket["errors"],
+            }
+        )
+    spans.sort(key=lambda item: -(item["avg_ms"] or 0))
+    runs.sort(key=lambda item: item["timestamp_ms"] or 0, reverse=True)
+
+    return {
+        "available": True,
+        "note": None,
+        "window_days": since_days,
+        "traces": len(normalized),
+        "runs": len(runs),
+        "spans": spans,
+        "errors": errors[:100],
+        "fallbacks": fallbacks[:100],
+        "generator": generator,
+        "tokens": tokens,
+        "estimated_usd": round(cost, 4),
+        "recent_runs": runs[:30],
     }

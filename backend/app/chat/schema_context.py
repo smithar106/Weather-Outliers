@@ -119,32 +119,29 @@ def build_system_prompt() -> str:
 
 
 TRACE_CONTEXT = """\
-The data below is MLflow trace data for the application's recent pipeline runs —
-the agentic flow. One trace is one pipeline execution (a run); its spans are the
-stages it went through.
+The data below is aggregated MLflow trace analytics for the application's pipeline
+runs — the agentic flow. It summarises every span over a window, not raw traces.
 
-Spans (parent → child):
-- pipeline.run_daily (root) — the whole daily run, with attributes run_id,
-  analysis_date, status, cities_with_data, completeness, events_published,
-  llm_calls, llm_estimated_usd, duration_ms, error_message.
-- fetch_observations, require_completeness, score_anomalies, rank_events,
-  explain_events — the pipeline stages.
-- explain_event (one per ranked event) — attributes event_id, city_id, metric,
-  rank, generator ('llm'|'template'), attempts, tool_call_count, prompt_tokens,
-  completion_tokens, estimated_usd, fallback_reason, validation_ok.
-- llm_completion — one model call; attributes model, prompt_tokens,
-  completion_tokens, stop_reason, iteration.
-- validate_explanation — attributes ok, stage, violation_count, violations.
+The fields are:
+- window_days: how many days the analytics cover.
+- traces / runs: how many traces and daily pipeline runs were found.
+- spans: per span-name statistics — count, avg_ms, max_ms, errors. Spans include
+  pipeline.run_daily (the whole run), fetch_observations, score_anomalies,
+  rank_events, explain_events, explain_event (per event), llm_completion (one
+  model call) and validate_explanation.
+- errors: spans that ended in ERROR, with the span name, run id, city and message.
+- fallbacks: events whose explanation fell back to the deterministic template,
+  with the city, metric and reason (e.g. "no LLM provider configured").
+- generator: how many explanations were "llm" versus "template".
+- tokens: total prompt and completion tokens across the window.
+- estimated_usd: total estimated LLM cost across the window.
+- recent_runs: the most recent daily runs with status, duration, events_published,
+  llm_calls and completeness.
 
-Each span has: name, type (CHAIN/AGENT/LLM/RETRIEVER/PARSER), status (OK/ERROR),
-latency_ms, and an attributes object. Each trace has: trace_id, timestamp_ms,
-status, duration_ms, root_span, span_count, model, methodology_version,
-prompt_version, run_id.
-
-Answer questions about the agent's behaviour from this data — latency, failures,
-fallbacks to the deterministic template, token usage and cost, and which stages
-or events behaved unusually. State the specific answer with the actual names and
-numbers from the traces; never invent a value that is not in the traces.
+Answer questions about the agent's behaviour and performance from these numbers —
+average or slowest stage latency, failure counts, template fallbacks, token usage
+and cost. State the specific answer with the actual numbers; never invent a value
+that is not in the data.
 """
 
 

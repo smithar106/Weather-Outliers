@@ -156,22 +156,27 @@ def test_answer_question_handles_unparseable_response(session):
     assert result.refused is True
 
 
-def test_answer_agent_question_is_grounded_in_traces(monkeypatch):
+def test_answer_agent_question_is_grounded_in_analytics(monkeypatch):
     from app import monitoring
 
     monkeypatch.setattr(
         monitoring,
-        "recent_trace_data",
-        lambda settings, limit=20: {
+        "trace_analytics",
+        lambda settings, since_days=30: {
             "available": True,
             "note": None,
-            "traces": [
-                {
-                    "trace_id": "tr-1",
-                    "status": "OK",
-                    "spans": [{"name": "pipeline.run_daily", "latency_ms": 9000, "status": "OK"}],
-                }
+            "window_days": 30,
+            "traces": 1,
+            "runs": 1,
+            "spans": [
+                {"name": "fetch_observations", "count": 1, "avg_ms": 9000, "max_ms": 9000, "errors": 0}
             ],
+            "errors": [],
+            "fallbacks": [],
+            "generator": {"llm": 0, "template": 10},
+            "tokens": {"prompt": 0, "completion": 0},
+            "estimated_usd": 0.0,
+            "recent_runs": [{"run_id": "r", "status": "OK", "duration_ms": 9000}],
         },
     )
     client = _FakeClient("The pipeline is healthy; the slowest stage was the fetch at 9s.")
@@ -186,8 +191,13 @@ def test_answer_agent_question_handles_no_traces(monkeypatch):
 
     monkeypatch.setattr(
         monitoring,
-        "recent_trace_data",
-        lambda settings, limit=20: {"available": True, "note": "no traces yet", "traces": []},
+        "trace_analytics",
+        lambda settings, since_days=30: {
+            "available": True,
+            "note": "no traces yet",
+            "traces": 0,
+            "runs": 0,
+        },
     )
     result = answer_agent_question("how's the agent?", client=_FakeClient(), settings=object())
     assert result["trace_count"] == 0
