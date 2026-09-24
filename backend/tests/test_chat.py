@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.chat.agent import _parse_plan, answer_question
+from app.chat.agent import _parse_plan, answer_agent_question, answer_question
 from app.chat.sql import SqlRejected, _jsonable, execute_query, validate_sql
 
 # ---------------------------------------------------------------------------
@@ -154,6 +154,44 @@ def test_answer_question_handles_unparseable_response(session):
     client = _FakeClient("garbage that is not json")
     result = answer_question("q?", client=client, session=session, max_rows=100)
     assert result.refused is True
+
+
+def test_answer_agent_question_is_grounded_in_traces(monkeypatch):
+    from app import monitoring
+
+    monkeypatch.setattr(
+        monitoring,
+        "recent_trace_data",
+        lambda settings, limit=20: {
+            "available": True,
+            "note": None,
+            "traces": [
+                {
+                    "trace_id": "tr-1",
+                    "status": "OK",
+                    "spans": [{"name": "pipeline.run_daily", "latency_ms": 9000, "status": "OK"}],
+                }
+            ],
+        },
+    )
+    client = _FakeClient("The pipeline is healthy; the slowest stage was the fetch at 9s.")
+    result = answer_agent_question("how's the agent?", client=client, settings=object())
+    assert result["available"] is True
+    assert result["trace_count"] == 1
+    assert "9s" in result["answer"]
+
+
+def test_answer_agent_question_handles_no_traces(monkeypatch):
+    from app import monitoring
+
+    monkeypatch.setattr(
+        monitoring,
+        "recent_trace_data",
+        lambda settings, limit=20: {"available": True, "note": "no traces yet", "traces": []},
+    )
+    result = answer_agent_question("how's the agent?", client=_FakeClient(), settings=object())
+    assert result["trace_count"] == 0
+    assert "No traces" in result["answer"]
 
 
 # ---------------------------------------------------------------------------

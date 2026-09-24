@@ -541,3 +541,17 @@ export interface MonitorTraces {
   count: number;
   traces: MonitorTrace[];
 }
+
+// ---------------------------------------------------------------------------
+// Agent chat (trace questions)
+// ---------------------------------------------------------------------------
+
+export interface AgentChatResponse {
+  question: string;
+  answer: string;
+  /** How many traces the answer was grounded in. */
+  trace_count: number;
+  /** False when the tracking store is not configured or unreachable. */
+  available: boolean;
+  note: string | null;
+}

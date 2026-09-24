@@ -263,3 +263,31 @@ def get_trace(settings: Settings, trace_id: str) -> dict[str, Any] | None:
     if raw is None:
         return None
     return _normalize_trace(raw)
+
+
+def recent_trace_data(settings: Settings, limit: int = 20) -> dict[str, Any]:
+    """Recent traces *with their spans*, for the chat agent to answer trace questions."""
+    mlflow, note = _mlflow(settings)
+    if mlflow is None:
+        return {"available": False, "note": note, "traces": []}
+    try:
+        experiment = mlflow.get_experiment_by_name(settings.mlflow_experiment)
+    except Exception as exc:  # pragma: no cover
+        return {"available": False, "note": f"cannot reach the tracking store: {exc}", "traces": []}
+    if experiment is None:
+        return {
+            "available": True,
+            "note": f"experiment {settings.mlflow_experiment!r} has no traces yet",
+            "traces": [],
+        }
+    try:
+        traces = mlflow.search_traces(
+            locations=[experiment.experiment_id],
+            max_results=limit,
+            include_spans=True,
+            return_type="list",
+        )
+    except Exception as exc:  # pragma: no cover
+        return {"available": False, "note": f"cannot list traces: {exc}", "traces": []}
+    normalized = [_normalize_trace(trace) for trace in traces]
+    return {"available": True, "note": None, "traces": normalized}

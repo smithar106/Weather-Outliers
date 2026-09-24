@@ -467,7 +467,6 @@ class MonitorTracesOut(ApiModel):
 class ChatRequest(ApiModel):
     question: str = Field(min_length=1, max_length=1000)
 
-
 class ChatResponse(ApiModel):
     question: str
     answer: str
@@ -482,3 +481,17 @@ class ChatResponse(ApiModel):
     truncated: bool = False
     #: True when the question could not be answered with a read-only query.
     refused: bool = False
+
+
+class AgentChatRequest(ApiModel):
+    question: str = Field(min_length=1, max_length=1000)
+
+
+class AgentChatResponse(ApiModel):
+    question: str
+    answer: str
+    #: How many traces the answer was grounded in.
+    trace_count: int = 0
+    #: False when the tracking store is not configured or reachable.
+    available: bool = True
+    note: str | None = None

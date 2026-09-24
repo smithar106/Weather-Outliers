@@ -34,7 +34,7 @@ from app.api.serializers import (
     observation_out,
     run_out,
 )
-from app.chat import CHAT_PATH, answer_question
+from app.chat import CHAT_PATH, answer_agent_question, answer_question
 from app.config import Settings, get_settings
 from app.db import get_db
 from app.domain import METHODOLOGY_VERSION, RunStatus
@@ -49,6 +49,8 @@ from app.models import (
 )
 from app.provenance import LIMITATIONS, RANKING_BASIS, data_sources, methodology
 from app.schemas import (
+    AgentChatRequest,
+    AgentChatResponse,
     ArchiveEntryOut,
     ArchiveOut,
     ChatRequest,
@@ -630,6 +632,66 @@ def chat(
         row_count=len(result.rows),
         truncated=result.truncated,
         refused=result.refused,
+    )
+
+
+@router.post("/api/agent", response_model=AgentChatResponse, tags=["chat"])
+def agent_chat(
+    request: Request,
+    payload: AgentChatRequest,
+    session: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> AgentChatResponse:
+    """Answer a question about the agentic flow from recent MLflow traces.
+
+    Same gating and budget as the data chat, but grounded in the tracing store
+    rather than the application database.
+    """
+    if not settings.chat_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chat is not enabled (set CHAT_ENABLED=true).",
+        )
+    if settings.chat_api_key and request.headers.get("x-api-key") != settings.chat_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing X-API-Key.",
+        )
+    if not settings.llm_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="No LLM provider is configured; chat is unavailable.",
+        )
+    try:
+        client = get_llm_client(settings)
+    except LLMConfigError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        ) from exc
+    if client is None:  # pragma: no cover - llm_enabled guards this
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="No LLM provider is configured.",
+        )
+
+    budget = month_to_date_budget(session, settings)
+    if budget.exhausted:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=budget.reason or "The monthly AI budget has been reached.",
+        )
+
+    try:
+        result = answer_agent_question(payload.question, client=client, settings=settings)
+    finally:
+        client.close()
+
+    return AgentChatResponse(
+        question=payload.question,
+        answer=result["answer"],
+        trace_count=result["trace_count"],
+        available=result["available"],
+        note=result["note"],
     )
 
 

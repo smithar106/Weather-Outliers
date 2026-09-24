@@ -116,3 +116,43 @@ def build_system_prompt() -> str:
             RULES,
         ]
     )
+
+
+TRACE_CONTEXT = """\
+The data below is MLflow trace data for the application's recent pipeline runs —
+the agentic flow. One trace is one pipeline execution (a run); its spans are the
+stages it went through.
+
+Spans (parent → child):
+- pipeline.run_daily (root) — the whole daily run, with attributes run_id,
+  analysis_date, status, cities_with_data, completeness, events_published,
+  llm_calls, llm_estimated_usd, duration_ms, error_message.
+- fetch_observations, require_completeness, score_anomalies, rank_events,
+  explain_events — the pipeline stages.
+- explain_event (one per ranked event) — attributes event_id, city_id, metric,
+  rank, generator ('llm'|'template'), attempts, tool_call_count, prompt_tokens,
+  completion_tokens, estimated_usd, fallback_reason, validation_ok.
+- llm_completion — one model call; attributes model, prompt_tokens,
+  completion_tokens, stop_reason, iteration.
+- validate_explanation — attributes ok, stage, violation_count, violations.
+
+Each span has: name, type (CHAIN/AGENT/LLM/RETRIEVER/PARSER), status (OK/ERROR),
+latency_ms, and an attributes object. Each trace has: trace_id, timestamp_ms,
+status, duration_ms, root_span, span_count, model, methodology_version,
+prompt_version, run_id.
+
+Answer questions about the agent's behaviour from this data — latency, failures,
+fallbacks to the deterministic template, token usage and cost, and which stages
+or events behaved unusually. State the specific answer with the actual names and
+numbers from the traces; never invent a value that is not in the traces.
+"""
+
+
+def build_agent_system_prompt() -> str:
+    return "\n\n".join(
+        [
+            "You are a read-only analyst answering questions about how the Weather "
+            "Outliers pipeline agent is performing, using the MLflow trace data provided.",
+            TRACE_CONTEXT,
+        ]
+    )

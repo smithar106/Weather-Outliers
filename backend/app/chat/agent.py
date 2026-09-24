@@ -24,9 +24,11 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app import monitoring
 from app.agent.llm import Turn
-from app.chat.schema_context import build_system_prompt
+from app.chat.schema_context import build_agent_system_prompt, build_system_prompt
 from app.chat.sql import SqlRejected, execute_query
+from app.config import Settings
 
 _MAX_OUTPUT_TOKENS = 800
 _ANSWER_PREVIEW_ROWS = 20
@@ -159,3 +161,43 @@ def _parse_plan(text: str | None) -> dict[str, Any]:
             "explanation": data.get("explanation"),
         }
     return data
+
+
+def answer_agent_question(
+    question: str, *, client: Any, settings: Settings, limit: int = 20
+) -> dict[str, Any]:
+    """Answer a question about the agentic flow from the recent MLflow traces."""
+    data = monitoring.recent_trace_data(settings, limit=limit)
+
+    if not data["available"]:
+        return {
+            "available": False,
+            "note": data["note"],
+            "trace_count": 0,
+            "answer": f"Trace data is not available: {data['note']}",
+        }
+
+    traces = data["traces"]
+    if not traces:
+        return {
+            "available": True,
+            "note": data["note"],
+            "trace_count": 0,
+            "answer": "No traces have been recorded yet, so there is nothing to report on the "
+            "agent's recent runs.",
+        }
+
+    payload = json.dumps(traces, default=str)
+    response = client.complete(
+        system=build_agent_system_prompt(),
+        turns=[Turn(role="user", text=f"Question: {question}\n\nRecent traces:\n{payload}")],
+        tools=[],
+        max_tokens=600,
+    )
+    text = (getattr(response, "text", None) or "").strip()
+    return {
+        "available": True,
+        "note": None,
+        "trace_count": len(traces),
+        "answer": text or f"{len(traces)} traces found — see the monitor page for detail.",
+    }
