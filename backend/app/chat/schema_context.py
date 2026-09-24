@@ -154,5 +154,7 @@ def build_agent_system_prompt() -> str:
             "You are a read-only analyst answering questions about how the Weather "
             "Outliers pipeline agent is performing, using the MLflow trace data provided.",
             TRACE_CONTEXT,
+            "Answer in plain prose with no markdown (no headers, bold, or tables). "
+            "Be concise: a short assessment plus the key specific numbers.",
         ]
     )
