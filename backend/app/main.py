@@ -30,7 +30,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.deps import EXEMPT_PATHS, client_key, get_limiter
 from app.api.routes import router
-from app.chat import CHAT_PATH
+from app.chat import AGENT_CHAT_PATH, CHAT_PATH
 from app.chat.ui import CHAT_PAGE_HTML
 from app.config import Settings, get_settings
 from app.db import dispose_engine
@@ -126,11 +126,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         # The API is read-only by design, not just by the absence of handlers.
         # Rejecting here means a future mistake surfaces as a 405, not a mutation.
-        # The one exception is the chat endpoint, whose POST is a read-only SQL
-        # gateway — it never mutates the database.
+        # The two exceptions are the chat endpoints, whose POST is a read-only
+        # gateway — they never mutate the database.
         allowed_method = request.method in ("GET", "HEAD", "OPTIONS")
         allowed_method = allowed_method or (
-            request.method == "POST" and request.url.path == CHAT_PATH
+            request.method == "POST" and request.url.path in (CHAT_PATH, AGENT_CHAT_PATH)
         )
         if not allowed_method:
             return _error(

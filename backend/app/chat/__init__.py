@@ -18,5 +18,6 @@ Nothing here writes to the database, and nothing here is enabled unless
 from app.chat.agent import answer_agent_question, answer_question
 
 CHAT_PATH = "/api/chat"
+AGENT_CHAT_PATH = "/api/agent"
 
-__all__ = ["CHAT_PATH", "answer_agent_question", "answer_question"]
+__all__ = ["AGENT_CHAT_PATH", "CHAT_PATH", "answer_agent_question", "answer_question"]
