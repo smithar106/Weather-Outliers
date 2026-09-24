@@ -123,7 +123,7 @@ class World:
         self.engine.dispose()
 
 
-def build_world(*, with_board: bool = True) -> World:
+def build_world(*, with_board: bool = True, skip_explanations: bool = False) -> World:
     """Seed cities, cache baselines, and optionally publish one board."""
     import time
 
@@ -154,7 +154,9 @@ def build_world(*, with_board: bool = True) -> World:
         run_ms = 0
         if with_board:
             started = time.perf_counter()
-            run_report = pipeline.run_daily(EVAL_ANALYSIS_DATE, now_utc=EVAL_NOW_UTC)
+            run_report = pipeline.run_daily(
+                EVAL_ANALYSIS_DATE, now_utc=EVAL_NOW_UTC, skip_explanations=skip_explanations
+            )
             run_ms = int((time.perf_counter() - started) * 1000)
         pipeline.close()
 

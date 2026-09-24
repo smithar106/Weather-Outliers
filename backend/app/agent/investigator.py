@@ -224,9 +224,13 @@ class Investigator:
         client: LLMClient | None = None,
         *,
         budget: BudgetState | None = None,
+        system_prompt: str | None = None,
     ) -> None:
         self.session = session
         self.settings = settings or get_settings()
+        # A prompt override exists so the evaluation harness can compare two
+        # prompts over the same events without editing the shipped prompt.
+        self._system_prompt = system_prompt or SYSTEM_PROMPT
         self.budget = budget if budget is not None else month_to_date_budget(session, self.settings)
         if client is not None:
             self.client: LLMClient | None = client
@@ -371,10 +375,10 @@ class Investigator:
                     **prompt_identity(),
                 ) as llm_span:
                     llm_span.set_inputs(
-                        {"system": SYSTEM_PROMPT, "turns": _turns_for_trace(turns)}
+                        {"system": self._system_prompt, "turns": _turns_for_trace(turns)}
                     )
                     response = self.client.complete(  # type: ignore[union-attr]
-                        system=SYSTEM_PROMPT,
+                        system=self._system_prompt,
                         turns=turns,
                         tools=self.tools,
                         max_tokens=self.settings.agent_max_output_tokens,
@@ -735,13 +739,15 @@ def investigate_events(
     events: list[tuple[int, AnomalyEvent, City]],
     settings: Settings | None = None,
     client: LLMClient | None = None,
+    *,
+    system_prompt: str | None = None,
 ) -> InvestigationBatch:
     """Investigate the top ranked events, stopping cleanly if the budget runs out.
 
     ``events`` is a list of ``(rank, event, city)`` tuples in rank order.
     """
     settings = settings or get_settings()
-    investigator = Investigator(session, settings, client)
+    investigator = Investigator(session, settings, client, system_prompt=system_prompt)
     budget = investigator.budget
 
     outcomes: list[InvestigationOutcome] = []
