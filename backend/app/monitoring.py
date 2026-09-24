@@ -26,6 +26,16 @@ from app.models import EvaluationReport, PipelineRun
 #: MLflow reserves the ``mlflow.*`` attribute namespace for its own plumbing.
 _RESERVED = "mlflow."
 
+#: Error types that are expected, resumable stops rather than failures. The
+#: baseline build stops on ProviderBudgetExhausted and resumes on the next cron
+#: firing, so counting it as an error makes a healthy system look broken.
+BENIGN_ERROR_TYPES = frozenset({"ProviderBudgetExhausted"})
+
+
+def _is_benign_error(span: dict[str, Any]) -> bool:
+    attributes = span.get("attributes", {})
+    return attributes.get("error_type") in BENIGN_ERROR_TYPES
+
 
 def _str(value: Any, default: str = "") -> str:
     if value is None:
@@ -317,6 +327,8 @@ def agent_status(settings: Settings, limit: int = 10) -> dict[str, Any]:
 
     daily = [trace for trace in traces if trace.get("root_span") == "pipeline.run_daily"]
     error_spans = [span for t in traces for span in t["spans"] if span.get("status") == "ERROR"]
+    hard_errors = [span for span in error_spans if not _is_benign_error(span)]
+    budget_stops = [span for span in error_spans if _is_benign_error(span)]
 
     llm = 0
     template = 0
@@ -329,8 +341,8 @@ def agent_status(settings: Settings, limit: int = 10) -> dict[str, Any]:
                 elif generator == "template":
                     template += 1
 
-    if error_spans:
-        count = len(error_spans)
+    if hard_errors:
+        count = len(hard_errors)
         level = "degraded"
         label = f"Agent: {count} error" + ("s" if count != 1 else "")
     else:
@@ -342,6 +354,8 @@ def agent_status(settings: Settings, limit: int = 10) -> dict[str, Any]:
         parts.append(f"{len(daily)} run" + ("s" if len(daily) != 1 else ""))
     if llm or template:
         parts.append(f"{llm} LLM · {template} template")
+    if budget_stops:
+        parts.append(f"{len(budget_stops)} budget stop" + ("s" if len(budget_stops) != 1 else ""))
     detail = " · ".join(parts) or None
 
     return {
@@ -388,6 +402,7 @@ def trace_analytics(
 
     span_buckets: dict[str, dict[str, Any]] = {}
     errors: list[dict[str, Any]] = []
+    budget_stops: list[dict[str, Any]] = []
     fallbacks: list[dict[str, Any]] = []
     generator = {"llm": 0, "template": 0}
     tokens = {"prompt": 0, "completion": 0}
@@ -421,16 +436,26 @@ def trace_analytics(
                 bucket["total_ms"] += latency
                 bucket["max_ms"] = max(bucket["max_ms"], latency)
             if span.get("status") == "ERROR":
-                bucket["errors"] += 1
                 attrs = span.get("attributes", {})
-                errors.append(
-                    {
-                        "span": name,
-                        "run_id": trace.get("run_id"),
-                        "city": attrs.get("city_id"),
-                        "error": attrs.get("error_message") or attrs.get("error_type"),
-                    }
-                )
+                if _is_benign_error(span):
+                    budget_stops.append(
+                        {
+                            "span": name,
+                            "run_id": trace.get("run_id"),
+                            "city": attrs.get("city_id"),
+                            "note": attrs.get("error_message") or attrs.get("error_type"),
+                        }
+                    )
+                else:
+                    bucket["errors"] += 1
+                    errors.append(
+                        {
+                            "span": name,
+                            "run_id": trace.get("run_id"),
+                            "city": attrs.get("city_id"),
+                            "error": attrs.get("error_message") or attrs.get("error_type"),
+                        }
+                    )
 
             attrs = span.get("attributes", {})
             if span.get("name") == "explain_event":
@@ -479,6 +504,7 @@ def trace_analytics(
         "runs": len(runs),
         "spans": spans,
         "errors": errors[:100],
+        "budget_stops": budget_stops[:100],
         "fallbacks": fallbacks[:100],
         "generator": generator,
         "tokens": tokens,

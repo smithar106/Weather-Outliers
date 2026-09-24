@@ -130,6 +130,9 @@ The fields are:
   rank_events, explain_events, explain_event (per event), llm_completion (one
   model call) and validate_explanation.
 - errors: spans that ended in ERROR, with the span name, run id, city and message.
+- budget_stops: spans that stopped on the provider call budget (ProviderBudgetExhausted).
+  These are expected, resumable stops — the job resumes on the next schedule — so
+  treat them as routine, not as failures.
 - fallbacks: events whose explanation fell back to the deterministic template,
   with the city, metric and reason (e.g. "no LLM provider configured").
 - generator: how many explanations were "llm" versus "template".
