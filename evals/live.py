@@ -22,12 +22,16 @@ comparison is reproducible — the same events, the same ground truth, two promp
 from __future__ import annotations
 
 import argparse
+import hashlib
+import os
+import sys
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 
 from evals import environment
-from evals.harness import ratio
+from evals.harness import git_state, ratio
 
 
 @dataclass(frozen=True)
@@ -229,6 +233,104 @@ def render_comparison(a: Summary, b: Summary) -> str:
     return "\n".join(lines)
 
 
+def _prompt_sha(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
+
+
+def _slug(label: str) -> str:
+    import re
+
+    return re.sub(r"[^0-9a-z]+", "_", label.lower()).strip("_") or "config"
+
+
+def _metrics_for(prefix: str, summary: Summary) -> dict[str, float]:
+    metrics: dict[str, float] = {
+        f"{prefix}.events": summary.events,
+        f"{prefix}.llm_generated": summary.llm_generated,
+        f"{prefix}.template_generated": summary.template_generated,
+        f"{prefix}.grounded": summary.grounded,
+        f"{prefix}.prompt_tokens": summary.prompt_tokens,
+        f"{prefix}.completion_tokens": summary.completion_tokens,
+        f"{prefix}.estimated_usd": summary.estimated_usd,
+    }
+    if summary.grounding_rate is not None:
+        metrics[f"{prefix}.grounding_rate"] = summary.grounding_rate
+    if summary.avg_tool_calls is not None:
+        metrics[f"{prefix}.avg_tool_calls"] = summary.avg_tool_calls
+    if summary.avg_latency_ms is not None:
+        metrics[f"{prefix}.avg_latency_ms"] = summary.avg_latency_ms
+    return metrics
+
+
+def log_comparison(
+    config_a: LiveConfig,
+    config_b: LiveConfig,
+    summary_a: Summary,
+    summary_b: Summary,
+    results_a: list[EventResult],
+    results_b: list[EventResult],
+) -> str | None:
+    """Log the comparison to MLflow as one run. Best-effort; never raises."""
+    from app.observability import tracing
+
+    mlflow = tracing.import_mlflow()
+    if mlflow is None:
+        print("  (mlflow not installed — comparison not logged)", file=sys.stderr)
+        return None
+
+    uri = os.environ.get("MLFLOW_TRACKING_URI") or (
+        f"sqlite:///{environment.REPO_ROOT / 'mlflow.db'}"
+    )
+    base = os.environ.get("MLFLOW_EXPERIMENT", "weather-outliers")
+    experiment = os.environ.get("MLFLOW_LIVE_EXPERIMENT") or f"{base}-live"
+
+    commit, dirty = git_state(environment.REPO_ROOT)
+    from app.agent.investigator import prompt_identity
+    from app.config import get_settings
+
+    identity = prompt_identity()
+    settings = get_settings()
+    model_a = config_a.model or settings.openai_model or settings.anthropic_model
+    model_b = config_b.model or settings.openai_model or settings.anthropic_model
+
+    params = {
+        "events": summary_a.events,
+        "llm_provider": settings.llm_provider,
+        "a.prompt_sha256": identity["prompt_sha256"],
+        "b.prompt_sha256": _prompt_sha(config_b.prompt_text),
+        "a.model": model_a,
+        "b.model": model_b,
+        "git_commit": commit or "unknown",
+        "git_dirty": dirty,
+    }
+
+    try:
+        mlflow.set_tracking_uri(uri)
+        mlflow.set_experiment(experiment)
+        run_name = f"live-{datetime.now(UTC):%Y%m%dT%H%M%S}"
+        with mlflow.start_run(run_name=run_name) as run:
+            mlflow.set_tags(
+                {
+                    "evaluation.kind": "live_llm",
+                    "evaluation.generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
+                }
+            )
+            mlflow.log_params({k: str(v) for k, v in params.items()})
+            mlflow.log_metrics(_metrics_for(_slug(config_a.label), summary_a))
+            mlflow.log_metrics(_metrics_for(_slug(config_b.label), summary_b))
+            mlflow.log_dict(
+                {
+                    "a": [asdict(result) for result in results_a],
+                    "b": [asdict(result) for result in results_b],
+                },
+                "results.json",
+            )
+            return f"{experiment} · {run.info.run_id}"
+    except Exception as exc:  # pragma: no cover - telemetry is best-effort
+        print(f"  (MLflow logging failed: {exc})", file=sys.stderr)
+        return None
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     environment.configure(live_llm=True)
@@ -252,13 +354,20 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"evaluating {len(events)} events against the live LLM…", flush=True)
     try:
-        summary_a = aggregate(config_a.label, evaluate(config_a, events, world))
-        summary_b = aggregate(config_b.label, evaluate(config_b, events, world))
+        results_a = evaluate(config_a, events, world)
+        results_b = evaluate(config_b, events, world)
     finally:
         world.dispose()
 
+    summary_a = aggregate(config_a.label, results_a)
+    summary_b = aggregate(config_b.label, results_b)
+
     print()
     print(render_comparison(summary_a, summary_b))
+    print()
+
+    location = log_comparison(config_a, config_b, summary_a, summary_b, results_a, results_b)
+    print(f"  logged to {location}" if location else "  not logged to MLflow")
     print()
     return 0
 
