@@ -291,3 +291,62 @@ def recent_trace_data(settings: Settings, limit: int = 20) -> dict[str, Any]:
         return {"available": False, "note": f"cannot list traces: {exc}", "traces": []}
     normalized = [_normalize_trace(trace) for trace in traces]
     return {"available": True, "note": None, "traces": normalized}
+
+
+def agent_status(settings: Settings, limit: int = 10) -> dict[str, Any]:
+    """A deterministic one-line status of the agent, computed from recent traces."""
+    data = recent_trace_data(settings, limit=limit)
+    if not data["available"]:
+        return {
+            "available": False,
+            "level": "unknown",
+            "label": "Agent status unknown",
+            "detail": data["note"],
+            "runs": 0,
+        }
+    traces = data["traces"]
+    if not traces:
+        return {
+            "available": True,
+            "level": "unknown",
+            "label": "No runs yet",
+            "detail": "The pipeline has not produced any traces.",
+            "runs": 0,
+        }
+
+    daily = [trace for trace in traces if trace.get("root_span") == "pipeline.run_daily"]
+    error_spans = [span for t in traces for span in t["spans"] if span.get("status") == "ERROR"]
+
+    llm = 0
+    template = 0
+    for trace in traces:
+        for span in trace["spans"]:
+            if span.get("name") == "explain_event":
+                generator = span.get("attributes", {}).get("generator")
+                if generator == "llm":
+                    llm += 1
+                elif generator == "template":
+                    template += 1
+
+    if error_spans:
+        count = len(error_spans)
+        level = "degraded"
+        label = f"Agent: {count} error" + ("s" if count != 1 else "")
+    else:
+        level = "ok"
+        label = "Agent healthy"
+
+    parts = []
+    if daily:
+        parts.append(f"{len(daily)} run" + ("s" if len(daily) != 1 else ""))
+    if llm or template:
+        parts.append(f"{llm} LLM · {template} template")
+    detail = " · ".join(parts) or None
+
+    return {
+        "available": True,
+        "level": level,
+        "label": label,
+        "detail": detail,
+        "runs": len(daily),
+    }

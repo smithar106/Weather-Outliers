@@ -555,3 +555,11 @@ export interface AgentChatResponse {
   available: boolean;
   note: string | null;
 }
+
+export interface AgentStatus {
+  available: boolean;
+  level: "ok" | "degraded" | "unknown";
+  label: string;
+  detail: string | null;
+  runs: number;
+}

@@ -459,6 +459,15 @@ class MonitorTracesOut(ApiModel):
     traces: list[MonitorTraceOut] = Field(default_factory=list)
 
 
+class AgentStatusOut(ApiModel):
+    available: bool
+    #: ``ok`` / ``degraded`` / ``unknown``.
+    level: str
+    label: str
+    detail: str | None = None
+    runs: int = 0
+
+
 # ---------------------------------------------------------------------------
 # Chat (NL→SQL)
 # ---------------------------------------------------------------------------

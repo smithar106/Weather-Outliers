@@ -15,6 +15,7 @@
  */
 
 import type {
+  AgentStatus,
   Archive,
   AnomalyEventDetail,
   CityDetail,
@@ -245,6 +246,13 @@ export function getMonitorTraces(limit = 50): Promise<MonitorTraces> {
     params: { limit },
     revalidate: REVALIDATE_SECONDS_META,
     tags: ["monitor", "monitor:traces"],
+  });
+}
+
+export function getAgentStatus(): Promise<AgentStatus> {
+  return get<AgentStatus>("/api/monitor/agent-status", {
+    revalidate: REVALIDATE_SECONDS_META,
+    tags: ["monitor", "monitor:agent-status"],
   });
 }
 

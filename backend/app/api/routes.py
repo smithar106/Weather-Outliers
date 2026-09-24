@@ -51,6 +51,7 @@ from app.provenance import LIMITATIONS, RANKING_BASIS, data_sources, methodology
 from app.schemas import (
     AgentChatRequest,
     AgentChatResponse,
+    AgentStatusOut,
     ArchiveEntryOut,
     ArchiveOut,
     ChatRequest,
@@ -724,6 +725,16 @@ def monitor_evals(
     _set_cache(response, settings)
     reports = monitoring.recent_evals(session, limit=limit)
     return MonitorEvalsOut(count=len(reports), reports=reports)
+
+
+@router.get("/api/monitor/agent-status", response_model=AgentStatusOut, tags=["monitor"])
+def monitor_agent_status(
+    response: Response,
+    settings: Settings = Depends(get_settings),
+) -> AgentStatusOut:
+    """A one-line, deterministic status of the agent from recent traces."""
+    response.headers["Cache-Control"] = "no-store"
+    return AgentStatusOut(**monitoring.agent_status(settings))
 
 
 @router.get("/api/monitor/traces", response_model=MonitorTracesOut, tags=["monitor"])

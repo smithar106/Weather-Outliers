@@ -13,7 +13,7 @@ import {
   Metric,
   Section,
 } from "@/components/ui";
-import { ApiError, getHealth, getLatestRankings } from "@/lib/api";
+import { ApiError, getAgentStatus, getHealth, getLatestRankings } from "@/lib/api";
 import {
   categoryStyle,
   cityLabel,
@@ -25,7 +25,7 @@ import {
   formatTimestamp,
   NO_VALUE,
 } from "@/lib/format";
-import type { Rankings } from "@/lib/types";
+import type { AgentStatus, Rankings } from "@/lib/types";
 
 /**
  * Rendered per request, not prerendered at build time.
@@ -67,10 +67,15 @@ export default async function HomePage() {
 
   // Freshness is supplementary; a health failure must not take the page down.
   const health = await getHealth().catch(() => null);
+  const agentStatus = await getAgentStatus().catch(() => null);
 
   return (
     <>
-      <Hero rankings={rankings} hoursSincePublish={health?.hours_since_publish ?? null} />
+      <Hero
+        rankings={rankings}
+        hoursSincePublish={health?.hours_since_publish ?? null}
+        agentStatus={agentStatus}
+      />
 
       <Container className="pb-16">
         <Insight rankings={rankings} />
@@ -149,10 +154,25 @@ export default async function HomePage() {
   );
 }
 
-function Hero({ rankings, hoursSincePublish }: { rankings: Rankings; hoursSincePublish: number | null }) {
+function Hero({
+  rankings,
+  hoursSincePublish,
+  agentStatus,
+}: {
+  rankings: Rankings;
+  hoursSincePublish: number | null;
+  agentStatus: AgentStatus | null;
+}) {
   const topEvent = rankings.events[0]?.event;
   const categories = new Set(rankings.events.map((ranked) => ranked.event.category));
   const topStyle = topEvent ? categoryStyle(topEvent.category) : null;
+
+  const agentDot =
+    agentStatus?.level === "ok"
+      ? "bg-positive"
+      : agentStatus?.level === "degraded"
+        ? "bg-warning"
+        : "bg-ink-600";
 
   return (
     <Container className="pt-12 sm:pt-16">
@@ -166,6 +186,20 @@ function Hero({ rankings, hoursSincePublish }: { rankings: Rankings; hoursSinceP
         </span>
         <span aria-hidden="true">·</span>
         <span>for {formatLocalDate(rankings.analysis_date, "long")}</span>
+
+        {agentStatus && agentStatus.available && (
+          <>
+            <span aria-hidden="true">·</span>
+            <Link
+              href="/agent"
+              className="inline-flex items-center gap-1.5 transition-colors hover:text-paper-muted"
+            >
+              <span aria-hidden="true" className={`size-1.5 rounded-full ${agentDot}`} />
+              {agentStatus.label}
+              {agentStatus.detail && <span>{agentStatus.detail}</span>}
+            </Link>
+          </>
+        )}
       </div>
 
       {!rankings.is_latest_available && rankings.requested_date && (
