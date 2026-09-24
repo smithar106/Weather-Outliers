@@ -29,6 +29,23 @@ the application database (`evals/persist.py`) and emails a summary
 (`evals/notify.py`). It is the scheduled entry point in production. See
 `docs/deployment.md` §7 for the worker configuration and the SMTP variables.
 
+### Evaluating the live LLM (costs money; run by hand)
+
+```bash
+# Generate explanations for the top 5 events with the live model and score them
+LLM_PROVIDER=openai OPENAI_API_KEY=… OPENAI_BASE_URL=https://api.deepseek.com/v1 \
+OPENAI_MODEL=deepseek-chat OPENAI_MAX_TOKENS_PARAM=max_tokens \
+backend/.venv/bin/python -m evals.live --events 5
+
+# Compare a candidate prompt and/or model against the current configuration
+backend/.venv/bin/python -m evals.live --events 5 --prompt-b-file /path/prompt.txt --model-b deepseek-chat
+```
+
+`evals.live` runs the golden set of ranked events through the real investigator
+and scores each explanation on grounding, model-vs-template fallback, tool calls,
+latency and tokens — then prints a side-by-side comparison of two configurations.
+It is never run in CI.
+
 ## What is measured
 
 | Suite | What it does | What it reports |
