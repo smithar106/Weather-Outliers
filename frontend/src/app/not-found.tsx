@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { Card, Container } from "@/components/ui";
 
-export const metadata = { title: "Not found" };
+export const metadata = { title: "Not found", robots: { index: false, follow: false } };
 
 export default function NotFound() {
   return (

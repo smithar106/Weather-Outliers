@@ -49,9 +49,12 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps) {
   const { date } = await params;
   if (!ISO_DATE.test(date)) return { title: "Archive" };
+  const canonical = `/archive/${date}`;
   return {
     title: formatLocalDate(date, "medium"),
     description: `The statistical outlier board published for ${formatLocalDate(date, "long")}.`,
+    alternates: { canonical },
+    openGraph: { url: canonical },
   };
 }
 

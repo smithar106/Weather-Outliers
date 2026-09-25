@@ -13,7 +13,12 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps) {
   const { traceId } = await params;
-  return { title: `Trace ${traceId.slice(0, 12)}…` };
+  const canonical = `/monitor/traces/${encodeURIComponent(traceId)}`;
+  return {
+    title: `Trace ${traceId.slice(0, 12)}…`,
+    alternates: { canonical },
+    openGraph: { url: canonical },
+  };
 }
 
 export default async function TraceDetailPage({ params }: PageProps) {

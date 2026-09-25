@@ -80,11 +80,14 @@ export async function generateMetadata({ params }: PageProps) {
   const { cityId } = await params;
   try {
     const detail = await getCity(cityId);
+    const canonical = `/city/${encodeURIComponent(cityId)}`;
     return {
       title: cityLabel(detail.city),
       description: `Seasonal baselines, stored observations and anomaly scoring for ${cityLabel(
         detail.city
       )}.`,
+      alternates: { canonical },
+      openGraph: { url: canonical },
     };
   } catch {
     // A metadata failure must not take the page down; the page itself handles it.
