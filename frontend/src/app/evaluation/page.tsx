@@ -40,7 +40,7 @@ export const metadata = {
   description:
     "Measured results from the project's own evaluation harness: statistical suites, agent grounding checks, pipeline reproducibility and API contract verification.",
   alternates: { canonical: "/evaluation" },
-  openGraph: { url: "/evaluation" },
+  openGraph: { title: "Evaluation", url: "/evaluation" },
 };
 
 const evaluation = report as EvalReport;

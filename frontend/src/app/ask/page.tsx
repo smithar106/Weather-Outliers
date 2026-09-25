@@ -9,7 +9,7 @@ export const metadata = {
   description:
     "Ask questions about the weather outliers in plain language, answered by a read-only query over the application's data.",
   alternates: { canonical: "/ask" },
-  openGraph: { url: "/ask" },
+  openGraph: { title: "Ask the data", url: "/ask" },
 };
 
 export default function AskPage() {

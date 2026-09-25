@@ -17,7 +17,7 @@ export const metadata = {
   description:
     "Pipeline run history, evaluation reports, and MLflow traces for the Weather Outliers application.",
   alternates: { canonical: "/monitor" },
-  openGraph: { url: "/monitor" },
+  openGraph: { title: "Monitor", url: "/monitor" },
 };
 
 export default async function MonitorPage() {

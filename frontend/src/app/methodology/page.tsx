@@ -10,7 +10,7 @@ export const metadata = {
   description:
     "How the daily statistical outlier board is computed, in four paragraphs.",
   alternates: { canonical: "/methodology" },
-  openGraph: { url: "/methodology" },
+  openGraph: { title: "Methodology", url: "/methodology" },
 };
 
 export default async function MethodologyPage() {

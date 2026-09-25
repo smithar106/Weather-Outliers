@@ -87,7 +87,7 @@ export async function generateMetadata({ params }: PageProps) {
         detail.city
       )}.`,
       alternates: { canonical },
-      openGraph: { url: canonical },
+      openGraph: { title: cityLabel(detail.city), url: canonical },
     };
   } catch {
     // A metadata failure must not take the page down; the page itself handles it.

@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: PageProps) {
     title: formatLocalDate(date, "medium"),
     description: `The statistical outlier board published for ${formatLocalDate(date, "long")}.`,
     alternates: { canonical },
-    openGraph: { url: canonical },
+    openGraph: { title: formatLocalDate(date, "medium"), url: canonical },
   };
 }
 

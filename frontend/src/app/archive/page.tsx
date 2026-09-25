@@ -41,7 +41,7 @@ export const metadata = {
   title: "Archive",
   description: "Every published daily ranking, with the methodology version that produced it.",
   alternates: { canonical: "/archive" },
-  openGraph: { url: "/archive" },
+  openGraph: { title: "Archive", url: "/archive" },
 };
 
 const PAGE_SIZE = 40;

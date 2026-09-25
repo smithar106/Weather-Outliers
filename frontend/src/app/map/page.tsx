@@ -26,7 +26,7 @@ export const metadata = {
   description:
     "The ranked cities on a map of North America, coloured by weather category. Tiles from Mapbox and OpenStreetMap.",
   alternates: { canonical: "/map" },
-  openGraph: { url: "/map" },
+  openGraph: { title: "Map", url: "/map" },
 };
 
 export default async function MapPage() {

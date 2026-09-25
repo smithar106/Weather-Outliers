@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: PageProps) {
   return {
     title: `Trace ${traceId.slice(0, 12)}…`,
     alternates: { canonical },
-    openGraph: { url: canonical },
+    openGraph: { title: `Trace ${traceId.slice(0, 12)}…`, url: canonical },
   };
 }
 
