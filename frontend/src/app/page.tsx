@@ -46,6 +46,8 @@ export const metadata = {
   title: "Yesterday was anything but normal",
   description:
     "The ten most statistically unusual weather events across 50 North American cities, ranked against a 30-year seasonal baseline.",
+  alternates: { canonical: "/" },
+  openGraph: { url: "/" },
 };
 
 export default async function HomePage() {
