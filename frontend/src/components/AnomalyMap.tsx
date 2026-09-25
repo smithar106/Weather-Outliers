@@ -38,11 +38,38 @@ import type { CategoryId, RankedEvent } from "@/lib/types";
 /** The light basemap, chosen to sit against the site's near-white ground. */
 const STYLE_URL = "mapbox://styles/mapbox/light-v11";
 
-/** North America, loose enough to hold Mérida and Edmonton at once. */
-const INITIAL_BOUNDS: [[number, number], [number, number]] = [
+/** Fallback for an empty board: a loose North America framing. */
+const FALLBACK_BOUNDS: [[number, number], [number, number]] = [
   [-128, 16],
   [-62, 57],
 ];
+
+/**
+ * The bounding box that holds every ranked marker, with breathing room.
+ *
+ * A fixed continental frame clips the far cities: Honolulu sits at −158° and
+ * St. John's at −53°, Anchorage at 61° and Mérida at 19°, so no single hardcoded
+ * box holds all of them without drowning the rest in empty ocean. Fitting to the
+ * events actually on the board means no marker starts off-screen, and the frame
+ * follows the data rather than an assumption about which cities will rank.
+ */
+function fitBoundsFor(events: RankedEvent[]): [[number, number], [number, number]] {
+  if (events.length === 0) return FALLBACK_BOUNDS;
+  const lngs = events.map((ranked) => ranked.event.city.longitude);
+  const lats = events.map((ranked) => ranked.event.city.latitude);
+  const minLng = Math.min(...lngs);
+  const maxLng = Math.max(...lngs);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  // A percentage pad so a tight cluster does not sit on the frame edge, floored
+  // at four degrees so a single-city or two-city board still gets a usable view.
+  const lngPad = Math.max(4, (maxLng - minLng) * 0.12);
+  const latPad = Math.max(4, (maxLat - minLat) * 0.12);
+  return [
+    [minLng - lngPad, minLat - latPad],
+    [maxLng + lngPad, maxLat + latPad],
+  ];
+}
 
 export function AnomalyMap({
   events,
@@ -67,6 +94,7 @@ export function AnomalyMap({
     [events]
   );
   const selected = selectedRank === null ? null : byRank.get(selectedRank) ?? null;
+  const initialBounds = useMemo(() => fitBoundsFor(events), [events]);
 
   // -- initialise once -----------------------------------------------------
   useEffect(() => {
@@ -79,8 +107,8 @@ export function AnomalyMap({
       map = new mapboxgl.Map({
         container: container.current,
         style: STYLE_URL,
-        bounds: INITIAL_BOUNDS,
-        fitBoundsOptions: { padding: 48 },
+        bounds: initialBounds,
+        fitBoundsOptions: { padding: 48, maxZoom: 6 },
         attributionControl: false,
         // The board is fifty cities on one continent; tilt and rotation add
         // nothing and make the markers harder to compare.
@@ -121,7 +149,7 @@ export function AnomalyMap({
       map.remove();
       mapRef.current = null;
     };
-  }, [accessToken]);
+  }, [accessToken, initialBounds]);
 
   // -- markers -------------------------------------------------------------
   useEffect(() => {
