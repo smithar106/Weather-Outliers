@@ -276,7 +276,7 @@ export function formatDurationMs(ms: number | null | undefined): string {
 
 export interface CategoryStyle {
   label: string;
-  /** Hex, because MapLibre needs a colour string it can pass to WebGL. */
+  /** Hex, because the map renderer needs a colour string it can pass to WebGL. */
   color: string;
   /** Tailwind classes for badges and accents. */
   badge: string;

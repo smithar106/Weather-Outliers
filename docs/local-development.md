@@ -167,10 +167,11 @@ real weather, and an image in a README is a claim.
 
 Captures are 1x by default; `SCALE=2` for a high-resolution one-off.
 
-Known: the `/map` capture fails in this headless setup. It waits for MapLibre to
-report itself idle, which needs tiles from `tiles.openfreemap.org`, and the script
-reports a timeout rather than photographing a half-drawn basemap. The map renders
-in a real browser; the capture of it is not part of the committed set.
+Known: the `/map` capture fails in this headless setup. It waits for Mapbox GL to
+report itself idle, which needs tiles from `api.mapbox.com` (and a `MAPBOX_TOKEN`),
+and the script reports a timeout rather than photographing a half-drawn basemap.
+The map renders in a real browser; the capture of it is not part of the committed
+set.
 
 ---
 

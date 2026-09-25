@@ -72,6 +72,9 @@ services:
       # the API directly for page data, so this address does not need to be
       # reachable from the host.
       API_BASE_URL: http://api:8000
+      # Public Mapbox access token for the /map basemap (read server-side, passed
+      # to the map as a prop). Leave empty and the map degrades to the ranked list.
+      MAPBOX_TOKEN: ${MAPBOX_TOKEN:-}
       PORT: "3050"
     ports:
       - "3050:3050"

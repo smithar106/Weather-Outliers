@@ -42,6 +42,9 @@ const VIEWPORT = { width: 1440, height: 1000 };
  */
 const SCALE = Number(process.env.SCALE ?? 1);
 
+/** How long /map may wait for the basemap to draw before the shot is aborted. */
+const MAP_IDLE_TIMEOUT_MS = 30_000;
+
 /**
  * What is actually on the board being photographed.
  *
@@ -83,12 +86,52 @@ async function resolveBoard() {
   };
 }
 
+/**
+ * Wait until the map has actually drawn something.
+ *
+ * `AnomalyMap` clears its own placeholder on Mapbox GL's `load` event, so the
+ * placeholder disappearing is the signal — no need to reach into the map instance
+ * from the page context. If the component instead rendered its failure overlay,
+ * that is reported rather than quietly photographed.
+ */
+async function waitForMap(page) {
+  const failure = page.getByTestId("map-failure");
+  const placeholder = page.getByTestId("map-loading");
+
+  const outcome = await Promise.race([
+    placeholder
+      .waitFor({ state: "hidden", timeout: MAP_IDLE_TIMEOUT_MS })
+      .then(() => "ready")
+      .catch(() => "timeout"),
+    failure
+      .waitFor({ state: "visible", timeout: MAP_IDLE_TIMEOUT_MS })
+      .then(() => "failed")
+      .catch(() => "timeout"),
+  ]);
+
+  if (outcome === "failed") {
+    const detail = await failure.innerText().catch(() => "(no detail)");
+    throw new Error(`the map reported a failure instead of loading:\n${detail}`);
+  }
+  if (outcome === "timeout") {
+    throw new Error(
+      `the map never reached idle within ${MAP_IDLE_TIMEOUT_MS} ms. ` +
+        "Tiles come from api.mapbox.com — check network access and MAPBOX_TOKEN before assuming a code fault.",
+    );
+  }
+
+  // Tiles fade in over a few frames after load. A short settle avoids capturing a
+  // half-composited basemap, which looks like a rendering bug rather than a map.
+  await page.waitForTimeout(1_500);
+}
+
 async function main() {
   const { cityId, provenance } = await resolveBoard();
   await mkdir(OUT_DIR, { recursive: true });
 
   const shots = [
     { name: "home", path: "/", fullPage: true },
+    { name: "map", path: "/map", fullPage: false, waitFor: waitForMap },
     { name: "city", path: `/city/${cityId}`, fullPage: true },
     { name: "methodology", path: "/methodology", fullPage: true },
     { name: "evaluation", path: "/evaluation", fullPage: true },
@@ -123,8 +166,11 @@ async function main() {
 
     const url = `${BASE_URL}${shot.path}`;
     try {
-      // `load`, not `networkidle`: every page here is server-rendered HTML that is
-      // complete at `load`.
+      // `load`, not `networkidle`: a Mapbox canvas requests tiles continuously as
+      // it settles, so the network never goes idle on /map and the wait times out on
+      // a page that is in fact fine. The map gets an explicit readiness check below
+      // instead, and every other page here is server-rendered HTML that is complete
+      // at `load`.
       const response = await page.goto(url, { waitUntil: "load", timeout: 30_000 });
       const status = response?.status();
       if (status !== 200) throw new Error(`${url} answered ${status}`);

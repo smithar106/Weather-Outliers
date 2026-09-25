@@ -6,7 +6,7 @@ const REPO_URL = "https://github.com/smithar106/Weather-Outliers";
 
 /**
  * The footer carries the two attributions the project is obliged to show —
- * Open-Meteo for the weather data and OpenFreeMap/OpenStreetMap for the tiles —
+ * Open-Meteo for the weather data and Mapbox/OpenStreetMap for the tiles —
  * plus the standing disclaimer that these are statistical outliers and not
  * records. That sentence appears on every page by construction.
  */
@@ -28,6 +28,7 @@ export function SiteFooter() {
             <ul className="mt-3 space-y-2 text-sm">
               {[
                 { href: "/", label: "Today's outliers" },
+                { href: "/map", label: "Map" },
                 { href: "/archive", label: "Archive" },
                 { href: "/ask", label: "Ask the data" },
                 { href: "/methodology", label: "Methodology" },
@@ -61,12 +62,12 @@ export function SiteFooter() {
               <li>
                 Map tiles by{" "}
                 <a
-                  href="https://openfreemap.org/"
+                  href="https://www.mapbox.com/about/maps/"
                   className="link-underline"
                   target="_blank"
                   rel="noreferrer noopener"
                 >
-                  OpenFreeMap
+                  Mapbox
                 </a>
                 , data{" "}
                 <a

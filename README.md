@@ -138,7 +138,7 @@ everything else works identically. The agent is an enhancement, not a dependency
 | Statistics | Hand-implemented | No NumPy, no pandas, no SciPy. Percentiles, quantile interpolation and the zero-inflated mixture are ~200 lines, are unit-tested against known values, and keep the image small and the arithmetic auditable. |
 | Database | PostgreSQL 17 | Seven tables. CI applies the full migration chain against a real PostgreSQL 17 service; the test suite itself runs on in-memory SQLite, because it is testing statistics and application logic rather than SQL dialect. |
 | Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind v4 | Server components fetch over the private network, so no API credential can reach the browser. |
-| Map | MapLibre GL + OpenFreeMap | No token, no account, ODbL/OSM tiles. |
+| Map | Mapbox GL JS | A public `pk.…` access token, no secret in the bundle. |
 | Charts | None | The three visualisations are SVG. A charting dependency for three charts is a liability, not a saving. |
 | Deployment | Docker, Railway | Same image for API and worker; see [docs/deployment.md](docs/deployment.md). |
 
@@ -317,8 +317,9 @@ docs/        methodology, data-sources, deployment, local-development
 * **Weather:** [Open-Meteo](https://open-meteo.com) — ERA5 reanalysis and
   near-real-time model data. Data under CC-BY 4.0; the free tier is for
   **non-commercial use only**. Attributed in the site footer.
-* **Map tiles:** [OpenFreeMap](https://openfreemap.org) — OpenStreetMap data under
-  ODbL. Attributed on the map.
+* **Map tiles:** [Mapbox](https://www.mapbox.com) — OpenStreetMap data under ODbL.
+  Attributed on the map. Uses a public `pk.…` access token, which is designed for
+  the browser and cannot administer the account.
 
 Terms were read before either was adopted, and the alternatives considered and
 rejected are recorded with reasons in [docs/data-sources.md](docs/data-sources.md).

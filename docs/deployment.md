@@ -199,7 +199,14 @@ Variables:
 
 ```
 API_BASE_URL=http://${{<backend-service-name>.RAILWAY_PRIVATE_DOMAIN}}:8000
+MAPBOX_TOKEN=pk.eyJ…
 ```
+
+The `MAPBOX_TOKEN` is a Mapbox **public** access token for the `/map` basemap. It
+starts with `pk.` and is designed for the browser, so it is the one value on this
+service that is allowed to reach the client — and it is read server-side at request
+time and passed to the map as a prop, not baked into the build. Leave it unset and
+the map degrades to the ranked list with a note, never a broken board.
 
 Use the reference form rather than typing the host. A service's private domain is
 derived from **its service name**, so `backend.railway.internal` is only correct if
@@ -597,5 +604,5 @@ observation and not by assumption:
 - [ ] `worker-finalize` has executed on schedule at least once
 - [ ] `worker-baselines` has executed on schedule at least once, and holds **no** LLM key
 - [ ] A deliberately failed run leaves the previous board published
-- [ ] Attribution to Open-Meteo and OpenStreetMap is visible in the footer
+- [ ] Attribution to Open-Meteo, Mapbox and OpenStreetMap is visible in the footer
 - [ ] `/methodology` shows the methodology version and reference period

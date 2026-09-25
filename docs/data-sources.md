@@ -182,23 +182,26 @@ application could do.
 
 ---
 
-## 2. Map tiles — OpenFreeMap
+## 2. Map tiles — Mapbox
 
 | | |
 | --- | --- |
-| Style | `https://tiles.openfreemap.org/styles/positron` |
+| Style | `mapbox://styles/mapbox/light-v11` |
 | Underlying data | OpenStreetMap, ODbL |
-| Authentication | None — no API key, no account |
-| Attribution | OpenFreeMap and © OpenStreetMap contributors, shown on the map and in the footer |
+| Authentication | A public `pk.…` access token, read server-side and passed to the map as a prop |
+| Attribution | Mapbox and © OpenStreetMap contributors, shown on the map and in the footer |
 
-Chosen for two reasons that are about this project's constraints rather than
-cartography: it needs no key, so there is no credential to leak to a browser, and
-it needs no account, so a reader can clone the repository and get a working map.
+Chosen because it needs only a *public* access token — a `pk.…` key is designed to
+sit in a browser bundle: it identifies the account for billing and style access and
+cannot be used to administer it. That distinction matters against this project's
+usual rule that no credential reaches the browser: the token is not a secret, and
+it is read server-side at request time and handed to the client as a prop rather
+than inlined into the build.
 
 The attributions are set explicitly in `AnomalyMap.tsx` rather than left to a
-default, and the map degrades to an explicit failure panel if tiles do not load —
-the ranked events are also listed as text on the same page, so the map is never
-the only way to read the board.
+default, and the map degrades to an explicit failure panel if the token is missing
+or the tiles do not load — the ranked events are also listed as text on the same
+page, so the map is never the only way to read the board.
 
 ---
 
