@@ -30,6 +30,11 @@ import {
 import { formatDurationMs, formatNumber, formatPercent, formatTimestamp } from "@/lib/format";
 import type { EvalCase, EvalMetric, EvalReport, EvalSuite, SuiteStatus } from "@/lib/types";
 
+// Rendered per request so the canonical/og:url metadata resolves against the
+// runtime NEXT_PUBLIC_SITE_URL — the build has no environment variables. The
+// report itself is still read from the committed JSON, not a network call.
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Evaluation",
   description:
