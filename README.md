@@ -8,7 +8,7 @@ Not the hottest place. Not the wettest. The most *surprising*: a 12 °C day in
 Phoenix is unremarkable and a 12 °C day in Iqaluit in January is not, and a
 ranking that cannot tell those apart is a ranking of climate, not of news.
 
-**Live site:** <https://weather-outliers-production.up.railway.app> — on Railway,
+**Live site:** <https://weather-outliers-app.up.railway.app> — on Railway,
 publishing real ERA5 data on a schedule, with nothing left to run by hand. Three
 cron workers: the daily analysis at 09:30 UTC, the reanalysis finalisation at
 11:00 UTC, and the climatology build at 13:00 and 16:00 UTC. See

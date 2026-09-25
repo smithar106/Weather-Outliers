@@ -44,7 +44,7 @@ import type {
 function normalizeBaseUrl(raw: string): string {
   // Strip trailing characters that cannot appear in a URL at all. Copying a
   // domain out of a hosting dashboard tends to bring the link glyph with it —
-  // `weather-outliers-production.up.railway.app↗` was a real value here, and it
+  // `weather-outliers-app.up.railway.app↗` was a real value here, and it
   // fails as an unreachable API with no hint that the host has a stray arrow on
   // the end. Leading/trailing whitespace, NBSP and zero-width characters come
   // from the same place. The cost of this is that a genuine IDN host ending in a
