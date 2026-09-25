@@ -30,7 +30,7 @@ from app.stats.ranking import TIEBREAK_CHAIN
 
 #: When the provider terms quoted below were last read. Re-check before any
 #: commercial deployment; published terms change without notice.
-SOURCES_VERIFIED_ON = date(2026, 9, 21)
+SOURCES_VERIFIED_ON = date(2026, 9, 25)
 
 RANKING_BASIS = (
     "Events are ranked by surprisal, -log10 of the empirical probability of a day "
@@ -129,11 +129,11 @@ def data_sources(settings: Settings) -> list[dict]:
             "provisional, and superseded by the reanalysis when it lands.",
         },
         {
-            "name": "OpenFreeMap vector tiles (OpenStreetMap data)",
-            "url": "https://openfreemap.org/",
-            "dataset": "positron",
-            "licence": "Map data ODbL 1.0; tiles served without an API key",
-            "attribution": "© OpenStreetMap contributors, tiles by OpenFreeMap.",
+            "name": "Mapbox vector tiles (OpenStreetMap data)",
+            "url": "https://www.mapbox.com/about/maps/",
+            "dataset": "light-v11",
+            "licence": "Map data ODbL 1.0 (OpenStreetMap); tiles served under the Mapbox terms",
+            "attribution": "© Mapbox, © OpenStreetMap contributors.",
             "observation_type": "basemap",
             "note": "Basemap only. No weather data comes from this source.",
         },
