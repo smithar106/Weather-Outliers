@@ -137,8 +137,10 @@ export function AnomalyMap({
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
     map.on("load", () => setReady(true));
     map.on("error", (event) => {
-      // A tile or glyph failure should degrade to the list beside the map rather
-      // than leaving a blank rectangle with no explanation.
+      // A style that never loads is a real failure worth surfacing. A tile that
+      // fails after a successful load is a transient network blip on a map that
+      // is otherwise drawing — Mapbox retries it — so it must not blank the board.
+      if (map.loaded()) return;
       const message = event.error?.message ?? "the tile provider could not be reached";
       setFailed((current) => current ?? message);
     });
