@@ -2,6 +2,11 @@ import Link from "next/link";
 
 import { Card, Container } from "@/components/ui";
 
+// Rendered per request rather than prerendered: the shared footer resolves the
+// public API documentation URL and the og:image against runtime environment
+// variables, and a build-time prerender would bake localhost into both.
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Not found", robots: { index: false, follow: false } };
 
 export default function NotFound() {
