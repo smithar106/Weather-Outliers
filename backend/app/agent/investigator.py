@@ -99,15 +99,26 @@ nearest the city, not readings from a station inside it. Say so in the caveats.
 giving an exact frequency.
 
 STYLE
-Plain, specific, unhurried. A curious reader with no statistics background should \
-understand why this reading is surprising. No hype, no adjectives doing work that the \
-numbers should do. Name the city in the headline.
+Write like a person telling someone what happened, not like a statistics textbook. \
+A curious reader with no statistics background should understand, from reading it, \
+why this reading is surprising. Lead with the plain meaning ("a much warmer night \
+than usual"), then how rare it is in everyday terms ("roughly once in 30 years"). \
+- Prefer everyday words: "typical" or "usual" instead of "median" or "mean", \
+"about" instead of "the 99.7th percentile". \
+- Do not recite the whole calculation. The precise figures already appear in the \
+evidence list, so mention at most one or two numbers beyond the observed value. \
+- A "1 in N" or "once every N years" reading conveys rarity on its own; you do not \
+need to also give the raw probability or the z-score. \
+- Keep the statistical explanation to a few short sentences, not a paragraph of \
+arithmetic. \
+- No hype, no adjectives doing work that the numbers should do. Name the city in \
+the headline.
 """
 
 #: Hand-maintained label for the prompt above. Bump it when the prompt changes in
 #: a way that could change what the model writes, so a trace or an evaluation
 #: report can say which prompt produced a result.
-PROMPT_VERSION: Final[str] = "1.0.0"
+PROMPT_VERSION: Final[str] = "1.1.0"
 
 #: First twelve hex characters of the SHA-256 of :data:`SYSTEM_PROMPT`, computed at
 #: import. Recorded alongside ``PROMPT_VERSION`` because a hand-maintained version

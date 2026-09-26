@@ -97,29 +97,34 @@ EXPLANATION_JSON_SCHEMA: dict = {
             "type": "string",
             "maxLength": 110,
             "description": (
-                "One sentence naming the city and what was unusual. State the observed "
-                "value. Do NOT use the word 'record' and do NOT claim any superlative "
-                "such as 'hottest ever'."
+                "One sentence, in plain words, naming the city and what was unusual about the "
+                "day (for example 'a much warmer night than usual'). State the observed value. "
+                "Do NOT use the word 'record' and do NOT claim any superlative such as 'hottest "
+                "ever'."
             ),
         },
         "statistical_explanation": {
             "type": "string",
             "maxLength": 700,
             "description": (
-                "2-4 sentences explaining why this value is statistically unusual for this "
-                "city at this time of year. Cite the observed value, the seasonal baseline, "
-                "and the percentile or tail probability exactly as the tools returned them. "
-                "Explain what the number means in plain language."
+                "2-4 sentences explaining, in plain everyday language, why this reading is "
+                "surprising for this city at this time of year. Lead with what happened ('a much "
+                "warmer night than usual'), then how rare it is in human terms ('about once in 30 "
+                "years'). State the observed value, but do not recite the whole calculation: the "
+                "exact figures (mean, median, percentile, tail probability) belong in the evidence "
+                "list, so mention at most one or two beyond the observed value. Prefer 'typical' "
+                "or 'usual' over 'median'/'mean', and 'about once in N years' over a raw "
+                "probability."
             ),
         },
         "historical_context": {
             "type": "string",
             "maxLength": 600,
             "description": (
-                "1-3 sentences placing the value against the reference-period sample "
-                "returned by get_city_baseline or get_historical_extremes. Describe those "
-                "figures as the highest/lowest value in the 1991-2020 reference sample for "
-                "this part of the calendar — never as a record of any kind."
+                "1-3 sentences, in plain language, placing the value against the 1991-2020 "
+                "reference sample: how it compares with what this part of the calendar is "
+                "usually like, or that it sits beyond every sampled day. Never call it a record "
+                "of any kind."
             ),
         },
         "caveats": {
