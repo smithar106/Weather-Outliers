@@ -8,7 +8,7 @@ lets the frontend share a single card component.
 
 from __future__ import annotations
 
-from app.domain import METRIC_CATEGORY, METRIC_LABELS, Metric
+from app.domain import METRIC_LABELS, Metric, category_for
 from app.models import (
     AgentExplanation,
     AnomalyEvent,
@@ -95,7 +95,7 @@ def _event_fields(event: AnomalyEvent, city: City) -> dict:
         "local_date": event.local_date,
         "metric": event.metric,
         "metric_label": METRIC_LABELS[metric],
-        "category": METRIC_CATEGORY[metric],
+        "category": category_for(metric, event.direction),
         "direction": event.direction,
         "observed_value": event.observed_value,
         "unit": event.unit,

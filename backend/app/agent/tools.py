@@ -33,10 +33,10 @@ from sqlalchemy.orm import Session
 from app.config import Settings, get_settings
 from app.domain import (
     METHODOLOGY_VERSION,
-    METRIC_CATEGORY,
     METRIC_LABELS,
     UNITS,
     Metric,
+    category_for,
 )
 from app.ingest.baselines import get_baseline_row
 from app.ingest.observations import get_observation
@@ -231,7 +231,7 @@ class AgentToolkit:
                     "country": city.country,
                     "metric": event.metric,
                     "metric_label": METRIC_LABELS[Metric(event.metric)],
-                    "category": METRIC_CATEGORY[Metric(event.metric)],
+                    "category": category_for(Metric(event.metric), event.direction),
                     "direction": event.direction,
                     "observed_value": _round(event.observed_value),
                     "unit": event.unit,

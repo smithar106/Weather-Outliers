@@ -109,6 +109,24 @@ METRIC_CATEGORY: Final[dict[Metric, str]] = {
     Metric.WIND_GUST: "wind",
 }
 
+
+def category_for(metric: Metric, direction: Direction | str) -> str:
+    """The display category for an event, which depends on the tail as well as
+    the metric: a warm overnight low is heat, not cold.
+
+    :data:`METRIC_CATEGORY` maps a metric to one colour for places with no
+    direction to consult (the methodology page). An event has a direction, so a
+    temperature extreme resolves to ``heat`` or ``cold`` by which tail it sits
+    in rather than by which of the two thermometers it came from.
+    """
+    if isinstance(direction, str):
+        direction = Direction(direction)
+    if metric == Metric.TEMP_MAX:
+        return "heat" if direction == Direction.ABOVE else "cold"
+    if metric == Metric.TEMP_MIN:
+        return "cold" if direction == Direction.BELOW else "heat"
+    return METRIC_CATEGORY[metric]
+
 # Metrics whose seasonal distribution is close enough to symmetric for a
 # z-score to be a meaningful summary. For everything else a z-score is either
 # withheld or explicitly flagged as not comparable.
