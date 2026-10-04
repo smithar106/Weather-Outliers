@@ -133,7 +133,11 @@ class Settings(BaseSettings):
 
     # ---------------------------------------------------------------- pipeline
     pipeline_source_lag_hours: int = 6
-    pipeline_finalize_lag_days: int = 6
+    # ERA5 reanalysis ("era5_seamless") is not reliably published at 6 days; a
+    # 6-day lag made `finalize` attempt dates before the settled archive existed
+    # and report 0/50 cities. 8 days leaves margin while still converging within
+    # the 14-day finalize lookback.
+    pipeline_finalize_lag_days: int = 8
     pipeline_min_city_completeness: float = 0.80
 
     # ----------------------------------------------------------- observability

@@ -1297,6 +1297,23 @@ def backfill(
     return reports
 
 
+def _reanalysis_not_ready(report: RunReport, settings: Settings) -> bool:
+    """True when a finalize run fetched cleanly but the settled archive had no
+    data for the date yet.
+
+    The final-tier fetch hit the provider without errors but returned too few
+    cities to publish — which, during finalize, means the reanalysis for that
+    day has not been published yet. That is an expected, self-healing condition
+    (the provisional run stays in place and the next finalize pass retries it),
+    not a job failure that should crash the cron.
+    """
+    return (
+        report.status == RunStatus.FAILED.value
+        and report.provider_errors == 0
+        and report.completeness < settings.pipeline_min_city_completeness
+    )
+
+
 def finalize(
     session: Session,
     settings: Settings | None = None,
@@ -1340,11 +1357,19 @@ def finalize(
     try:
         for day in pending:
             logger.info("finalising %s against the settled reanalysis", day)
-            reports.append(
-                pipeline.run_daily(
-                    day, kind=RunKind.FINALIZE, force_tier=DataTier.FINAL, now_utc=now_utc
-                )
+            report = pipeline.run_daily(
+                day, kind=RunKind.FINALIZE, force_tier=DataTier.FINAL, now_utc=now_utc
             )
+            if _reanalysis_not_ready(report, settings):
+                # The settled archive for this day is not published yet, so the
+                # final-tier fetch came back empty. Leave the provisional run in
+                # place and retry on the next finalize pass instead of treating
+                # it as a failed job that crashes the cron.
+                logger.warning(
+                    "deferring %s: reanalysis not settled yet (%s)", day, report.error
+                )
+                continue
+            reports.append(report)
     finally:
         pipeline.close()
     return reports

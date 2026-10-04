@@ -665,6 +665,40 @@ def test_finalize_ignores_days_whose_archive_has_not_caught_up(world, test_setti
     assert finalize(world, test_settings, FixtureProvider(), now_utc=NOW) == []
 
 
+def test_finalize_defers_a_day_whose_reanalysis_is_still_empty(world, test_settings):
+    """A day inside the finalize window whose settled archive returns no data yet
+    is deferred, not failed — the cron must exit clean rather than crash."""
+    pipeline = Pipeline(world, test_settings, FixtureProvider())
+    provisional = pipeline.run_daily(ANALYSIS_DATE, now_utc=NOW)
+    pipeline.close()
+    assert provisional.data_tier == DataTier.PROVISIONAL.value
+
+    class NotSettledProvider:
+        """Serves the provisional estimate but no settled reanalysis yet."""
+
+        name = "not-settled"
+
+        def __init__(self):
+            self._real = FixtureProvider()
+
+        def fetch_daily(self, **kwargs):
+            if kwargs.get("tier") == DataTier.FINAL:
+                return []
+            return self._real.fetch_daily(**kwargs)
+
+        def close(self):
+            self._real.close()
+
+    reports = finalize(
+        world, test_settings, NotSettledProvider(), now_utc=NOW + timedelta(days=8)
+    )
+
+    assert reports == []  # deferred, not failed
+    run = world.get(PipelineRun, provisional.run_id)
+    assert run.data_tier == DataTier.PROVISIONAL.value
+    assert run.published is True
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
